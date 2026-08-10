@@ -16,6 +16,8 @@
         .result-box pre{padding:0;white-space:pre-wrap}
         .ok-message{color:#4dffc3}.error-message{color:#ff9dbb}
         .hint{font-size:12px;color:#6f86a5;margin-top:-4px}
+        .mount-steps{margin:2px 0 0;padding:12px 14px;border:1px solid rgba(0,225,255,.14);border-radius:8px;background:rgba(0,225,255,.035);color:#9cb2cf;font-size:13px;line-height:1.5}
+        .mount-steps strong{color:#d6e8ff}
         @media(max-width:900px){.tool-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -112,9 +114,9 @@
             </section>
 
             <section class="panel tool-card">
-                <h2>Teach Mount</h2>
-                <p>Search the local JMod mount catalog by friendly name or use a verified spell ID.</p>
-                <form method="post" action="/jmod-tools" class="mount-form">
+                <h2>Mount Manager</h2>
+                <p>Teach a mount from the local 3.3.5a JMod catalog, then summon it normally in-game.</p>
+                <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="mount">
                     <select name="character" required>
                         <option value="">Choose character...</option>
@@ -122,10 +124,14 @@
                     </select>
                     <input name="value" list="mount-options" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
                     <datalist id="mount-options">
-                        {% for m in mounts %}<option value="{{ m.name }} [{{ m.game_id }}]"></option>{% endfor %}
+                        {% for m in mounts %}
+                            <option value="{{ m.game_id }}">{{ m.name }} [{{ m.game_id }}]</option>
+                        {% endfor %}
                     </datalist>
-                    <div class="hint">Duplicate mount names are shown with their spell ID. Selecting one sends only the verified ID to the helper.</div>
-                    <button class="primary-button" type="submit">Teach Mount</button>
+                    <button class="primary-button" type="submit">Teach / Add Mount</button>
+                    <div class="mount-steps">
+                        <strong>To summon it:</strong> after the mount is taught, open the character's Mounts/Companions window in WoW, find the mount, and use it. JMod can teach a named player from the server console; AzerothCore's normal cast/mount commands require an in-game selected target, so this page does not pretend it can remotely click the mount for you.
+                    </div>
                 </form>
             </section>
 
@@ -151,14 +157,5 @@
         </div>
     </main>
 </div>
-<script>
-for (const form of document.querySelectorAll('.mount-form')) {
-    form.addEventListener('submit', () => {
-        const input = form.querySelector('input[name="value"]');
-        const match = input.value.match(/\[(\d+)\]\s*$/);
-        if (match) input.value = match[1];
-    });
-}
-</script>
 </body>
 </html>
