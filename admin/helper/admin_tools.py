@@ -30,6 +30,7 @@ NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{1,31}$")
 AUDIT_PATH = Path("/opt/wow-admin/data/admin-audit.jsonl")
 ANSI_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 MAX_GOLD = 214748
+MAX_SPELL_ID = 4_294_967_295
 
 
 class AuditMeta(BaseModel):
@@ -54,8 +55,8 @@ class JCExecuteRequest(AuditMeta):
     """Structured request for the shared JMod/JesterConsole vocabulary.
 
     `value` is intentionally a string because its meaning depends on the
-    command: item alias/id, level, or gold amount. This keeps the endpoint
-    compact while command-specific validation remains server-side.
+    command: item alias/id, level, gold amount, or spell id. This keeps the
+    endpoint compact while command-specific validation remains server-side.
     """
 
     command: str = Field(min_length=1, max_length=32)
@@ -143,8 +144,6 @@ def _audit(event: dict[str, Any]) -> None:
         "timestamp": datetime.now(timezone.utc).isoformat(),
         **event,
     }
-    # One JSON object per line keeps writes append-only and easy to inspect with
-    # ordinary Unix tooling while avoiding a second database dependency.
     with AUDIT_PATH.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
 
@@ -260,11 +259,28 @@ def _set_gold_by_character(*, req: JCExecuteRequest, character: str, gold: int) 
         conn.close()
 
 
+def _teach_spell(*, req: JCExecuteRequest, canonical: str, character: str, spell_id: int) -> dict[str, Any]:
+    """Teach one spell through the verified AzerothCore named-player command."""
+    command = f"player learn {character} {spell_id}"
+    action = "TEACH_MOUNT" if canonical == "mount" else "TRAIN_SPELL"
+    result = _perform_and_audit(
+        meta=req,
+        action=action,
+        target=character,
+        command=command,
+        details={"spell_id": spell_id, "source": "jc"},
+    )
+    return {
+        "canonical": canonical,
+        "character": character,
+        "spell_id": spell_id,
+        **result,
+    }
+
+
 @router.post("/admin-tools/character/items")
 def send_items(req: SendItemsRequest):
     character = _safe_name(req.character)
-    # AzerothCore's console-safe mail command accepts a named player and does
-    # not depend on a selected in-game target.
     command = (
         f'send items {character} "Admin delivery" '
         f'"Delivered by JesterWoW Admin Console" {req.item_id}:{req.count}'
@@ -300,9 +316,8 @@ def set_level(req: LevelRequest):
 def execute_jc(req: JCExecuteRequest):
     """Execute shared JMod commands through one validated backend.
 
-    Supported now: help/?, info, item/add, level/lvl, gold/money. Registered
-    commands that are not implemented here return 501 instead of falling
-    through to a generic console proxy.
+    Supported now: help/?, info, item/add, level/lvl, gold/money,
+    mount/learnmount, and train/training/spell/learn.
     """
     canonical, spec = resolve_command(req.command)
     if canonical is None or spec is None:
@@ -321,7 +336,7 @@ def execute_jc(req: JCExecuteRequest):
         )
         return {"canonical": canonical, **result}
 
-    if canonical not in {"item", "level", "gold"}:
+    if canonical not in {"item", "level", "gold", "mount", "train"}:
         raise HTTPException(
             status_code=501,
             detail=f"Command '{canonical}' is registered but not executable yet",
@@ -345,6 +360,20 @@ def execute_jc(req: JCExecuteRequest):
         gold = _parse_int(req.value, field="gold", minimum=0, maximum=MAX_GOLD)
         result = _set_gold_by_character(req=req, character=character, gold=gold)
         return {"canonical": canonical, **result}
+
+    if canonical in {"mount", "train"}:
+        spell_id = _parse_int(
+            req.value,
+            field="spell id",
+            minimum=1,
+            maximum=MAX_SPELL_ID,
+        )
+        return _teach_spell(
+            req=req,
+            canonical=canonical,
+            character=character,
+            spell_id=spell_id,
+        )
 
     alias = resolve_item_alias(req.value)
     if alias:
@@ -394,7 +423,6 @@ def get_audit(limit: int = 250):
     if not AUDIT_PATH.exists():
         return {"events": []}
 
-    # The log is intentionally bounded when exposed to the UI.
     lines = AUDIT_PATH.read_text(encoding="utf-8", errors="replace").splitlines()[-limit:]
     events = []
     for line in reversed(lines):
