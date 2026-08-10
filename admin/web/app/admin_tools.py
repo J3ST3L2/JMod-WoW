@@ -177,6 +177,65 @@ def _resolve_item(text: str):
     return {"ambiguous": matches}
 
 
+def _catalog_entities(entity_type: str, query: str = "", limit: int = 500):
+    """Read friendly entities from JMod's local catalog using the web RO user."""
+    query = query.strip()
+    limit = max(1, min(int(limit), 1000))
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            if not query:
+                cur.execute(f"""
+                    SELECT game_id, name, short_description, description, required_level
+                    FROM jmod.catalog_entities
+                    WHERE entity_type=%s AND enabled=1
+                    ORDER BY name, game_id
+                    LIMIT {limit}
+                """, (entity_type,))
+            elif query.isdigit():
+                cur.execute(f"""
+                    SELECT game_id, name, short_description, description, required_level
+                    FROM jmod.catalog_entities
+                    WHERE entity_type=%s AND enabled=1 AND game_id=%s
+                    ORDER BY name, game_id
+                    LIMIT {limit}
+                """, (entity_type, int(query)))
+            else:
+                cur.execute(f"""
+                    SELECT game_id, name, short_description, description, required_level
+                    FROM jmod.catalog_entities
+                    WHERE entity_type=%s AND enabled=1 AND name LIKE %s
+                    ORDER BY
+                        CASE WHEN LOWER(name)=LOWER(%s) THEN 0
+                             WHEN LOWER(name) LIKE LOWER(%s) THEN 1
+                             ELSE 2 END,
+                        name,
+                        game_id
+                    LIMIT {limit}
+                """, (entity_type, f"%{query}%", query, f"{query}%"))
+            return list(cur.fetchall())
+    finally:
+        conn.close()
+
+
+def _resolve_catalog_entity(entity_type: str, text: str):
+    cleaned = text.strip().strip('"\'')
+    matches = _catalog_entities(entity_type, cleaned, limit=15)
+    if not matches:
+        return None
+    if cleaned.isdigit():
+        return matches[0]
+
+    exact = [row for row in matches if str(row["name"]).lower() == cleaned.lower()]
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        return {"ambiguous": exact}
+    if len(matches) == 1:
+        return matches[0]
+    return {"ambiguous": matches}
+
+
 def _render(name: str, **ctx):
     return HTMLResponse(jinja.get_template(name).render(**ctx))
 
@@ -318,6 +377,7 @@ def jmod_tools_page(request: Request):
     return _render(
         "jmod_tools.html",
         characters=_characters(),
+        mounts=_catalog_entities("mount", limit=500),
         message="",
         error="",
         result="",
@@ -343,7 +403,23 @@ def jmod_tools_execute(
         "prompt": f"web:{command} {character} {value}".strip(),
     }
 
+    resolved_label = ""
     try:
+        if command.strip().lower() in {"mount", "learnmount"}:
+            mount = _resolve_catalog_entity("mount", value)
+            if not mount:
+                raise ValueError(f'No mount matched “{value}”. Try a mount name or spell ID.')
+            if "ambiguous" in mount:
+                choices = ", ".join(
+                    f'{row["name"]} ({row["game_id"]})'
+                    for row in mount["ambiguous"][:8]
+                )
+                raise ValueError(
+                    "That mount name is ambiguous. Use a more specific name or spell ID. Matches: " + choices
+                )
+            payload["value"] = str(mount["game_id"])
+            resolved_label = f'{mount["name"]} ({mount["game_id"]})'
+
         data = helper_post("/jc/execute", payload)
         if data.get("lines"):
             result_text = "\n".join(str(line) for line in data["lines"])
@@ -352,6 +428,8 @@ def jmod_tools_execute(
         else:
             result_text = json.dumps(data, indent=2, sort_keys=True)
         message = f"Executed JMod command: {data.get('canonical', data.get('command', command))}"
+        if resolved_label:
+            message += f" · {resolved_label}"
         error = ""
     except Exception as exc:
         result_text = ""
@@ -361,6 +439,7 @@ def jmod_tools_execute(
     return _render(
         "jmod_tools.html",
         characters=_characters(),
+        mounts=_catalog_entities("mount", limit=500),
         message=message,
         error=error,
         result=result_text,
