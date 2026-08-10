@@ -69,6 +69,16 @@ COMMANDS: dict[str, dict[str, Any]] = {
             {"name": "spell_id", "type": "spell"},
         ],
     },
+    "teleport": {
+        "description": "Fast travel a character to a named server teleport",
+        "aliases": ["travel", "tele", "fasttravel"],
+        "usage": "teleport <character> <location>",
+        "target": "character",
+        "arguments": [
+            {"name": "character", "type": "character"},
+            {"name": "location", "type": "teleport"},
+        ],
+    },
     "item": {
         "description": "Give item",
         "aliases": ["add"],
