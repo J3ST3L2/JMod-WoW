@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Runtime data
+run/
+logs/
+backups/
+data/*.db
+data/*.sqlite*
+data/cache/
+data/export/
+
+# Database dumps
+*.sql.gz
+*.dump
+*.bak
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# WoW client runtime
+WTF/
+Cache/
+Errors/
+Logs/
