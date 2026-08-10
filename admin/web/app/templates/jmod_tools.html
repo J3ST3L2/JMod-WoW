@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>JMod Tools - JesterWoW Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .tool-grid{display:grid;grid-template-columns:repeat(2,minmax(280px,1fr));gap:20px}
+        .tool-card{padding:20px}
+        .tool-card h2{margin:0 0 6px;font-size:18px}
+        .tool-card p{margin:0 0 18px;color:#8296b2}
+        .tool-card form{display:grid;gap:12px}
+        .tool-card input,.tool-card select{width:100%;padding:12px 14px;border-radius:8px;border:1px solid rgba(0,225,255,.15);background:#080e20;color:white}
+        .result-box{padding:20px}
+        .result-box pre{padding:0;white-space:pre-wrap}
+        .ok-message{color:#4dffc3}.error-message{color:#ff9dbb}
+        @media(max-width:900px){.tool-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo">JT</div>
+            <div class="brand-text"><strong>JesterWoW</strong><small>Admin Console</small></div>
+        </div>
+        <nav>
+            <a href="/">Dashboard</a>
+            <a href="/accounts">Accounts</a>
+            <a href="/characters">Characters</a>
+            <a href="/server">Server</a>
+            <a href="/gear">Gear</a>
+            <a class="active" href="/jmod">JMod Tools</a>
+            <a href="/tools/god-mode">God Mode</a>
+            <a href="/audit">Audit Log</a>
+        </nav>
+    </aside>
+    <main>
+        <header>
+            <div>
+                <h1>JMod Tools</h1>
+                <p>Shared admin commands backed by the JMod command registry</p>
+            </div>
+        </header>
+
+        {% if message %}<section class="panel"><div class="result-box ok-message">{{ message }}</div></section>{% endif %}
+        {% if error %}<section class="panel"><div class="result-box error-message">{{ error }}</div></section>{% endif %}
+        {% if result %}<section class="panel"><div class="panel-title"><h2>Command Result</h2></div><div class="result-box"><pre>{{ result }}</pre></div></section>{% endif %}
+
+        <div class="tool-grid">
+            <section class="panel tool-card">
+                <h2>Server Info</h2>
+                <p>Query the live AzerothCore worldserver.</p>
+                <form method="post" action="/jmod">
+                    <input type="hidden" name="command" value="info">
+                    <button class="primary-button" type="submit">Get Server Info</button>
+                </form>
+            </section>
+
+            <section class="panel tool-card">
+                <h2>Command Help</h2>
+                <p>Show the commands currently registered in JMod.</p>
+                <form method="post" action="/jmod">
+                    <input type="hidden" name="command" value="help">
+                    <button class="secondary-button" type="submit">Show Commands</button>
+                </form>
+            </section>
+
+            <section class="panel tool-card">
+                <h2>Set Level</h2>
+                <p>Set a character level from 1 to 80.</p>
+                <form method="post" action="/jmod">
+                    <input type="hidden" name="command" value="level">
+                    <select name="character" required>
+                        <option value="">Choose character...</option>
+                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }} (Level {{ c.level }})</option>{% endfor %}
+                    </select>
+                    <input name="value" type="number" min="1" max="80" placeholder="Level" required>
+                    <button class="primary-button" type="submit">Set Level</button>
+                </form>
+            </section>
+
+            <section class="panel tool-card">
+                <h2>Set Gold</h2>
+                <p>Set exact gold for an offline character.</p>
+                <form method="post" action="/jmod">
+                    <input type="hidden" name="command" value="gold">
+                    <select name="character" required>
+                        <option value="">Choose character...</option>
+                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}{% if c.online %} (ONLINE){% endif %}</option>{% endfor %}
+                    </select>
+                    <input name="value" type="number" min="0" max="214748" placeholder="Gold" required>
+                    <button class="primary-button" type="submit">Set Gold</button>
+                </form>
+            </section>
+
+            <section class="panel tool-card">
+                <h2>Send Item</h2>
+                <p>Mail an item by ID or known alias such as benediction, shadowmourne, or bags.</p>
+                <form method="post" action="/jmod">
+                    <input type="hidden" name="command" value="item">
+                    <select name="character" required>
+                        <option value="">Choose character...</option>
+                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
+                    </select>
+                    <input name="value" placeholder="Item ID or alias" required>
+                    <input name="count" type="number" min="1" max="1000" value="1" required>
+                    <button class="primary-button" type="submit">Send Item</button>
+                </form>
+            </section>
+
+            <section class="panel tool-card">
+                <h2>Coming Next</h2>
+                <p>Mounts, training, presets, and richer catalog lookup will plug into this same page as their server-side handlers come online.</p>
+            </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>
