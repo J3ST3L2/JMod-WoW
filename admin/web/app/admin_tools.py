@@ -97,28 +97,12 @@ def _characters():
 
 
 def _friend_rows():
-    conn = get_db()
+    """Read the friend list through the privileged helper, not the web RO DB user."""
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT
-                    cs.guid,
-                    owner.name AS character_name,
-                    cs.friend AS friend_guid,
-                    friend.name AS friend_name,
-                    friend.level AS friend_level,
-                    friend.online AS friend_online,
-                    cs.flags,
-                    cs.note
-                FROM acore_characters.character_social cs
-                JOIN acore_characters.characters owner ON owner.guid = cs.guid
-                JOIN acore_characters.characters friend ON friend.guid = cs.friend
-                WHERE (cs.flags & 1) = 1
-                ORDER BY owner.name, friend.name
-            """)
-            return list(cur.fetchall())
-    finally:
-        conn.close()
+        payload = helper_get("/admin-tools/friends")
+        return list(payload.get("friends", []))
+    except Exception:
+        return []
 
 
 def _find_character(name: str):
@@ -334,7 +318,7 @@ def god_mode_execute(request: Request, prompt: str = Form(...)):
                 "character": char["name"], "item_id": int(item["entry"]), "item_name": item["name"],
                 "count": count, "actor": "web-admin", "request_ip": _client_ip(request), "prompt": original})
             msg = f'Mailed {count} x {item["name"]} to {char["name"]}. Command: {result.get("command", "")}'
-            return RedirectResponse("/tools/god-mode?message=" + quote_plus(msg), status_code=303)
+            return RedirectResponse("/gear?character=" + quote_plus(char["name"]) + "&message=" + quote_plus(msg), status_code=303)
         raise ValueError("I only execute allow-listed requests here.")
     except Exception as exc:
         return RedirectResponse("/tools/god-mode?prompt=" + quote_plus(original) + "&error=" + quote_plus(str(exc)), status_code=303)
@@ -362,6 +346,24 @@ def jmod_catalog_search(type: str, q: str = ""):
         "verified_at": row["last_verified_at"].isoformat() if row.get("last_verified_at") else None,
         "metadata": clean_metadata(row.get("metadata")),
     } for row in rows]}
+
+
+@router.post("/jmod-tools/friends/sync-all")
+def jmod_friend_sync_all(request: Request):
+    try:
+        data = helper_post("/admin-tools/friends/sync-all", {
+            "actor": "web-admin",
+            "request_ip": _client_ip(request),
+            "prompt": "web:sync-all-friends",
+        })
+        msg = (
+            f'Synced all {data.get("character_count", 0)} characters as mutual friends. '
+            f'Added {data.get("friend_links_added", 0)} missing directional friend links; '
+            f'{data.get("friend_links_after", 0)} total friend links are active.'
+        )
+        return RedirectResponse("/jmod-tools?message=" + quote_plus(msg), status_code=303)
+    except Exception as exc:
+        return RedirectResponse("/jmod-tools?error=" + quote_plus(str(exc)), status_code=303)
 
 
 @router.post("/jmod-tools/friends/add")
