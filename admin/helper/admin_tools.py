@@ -209,6 +209,32 @@ def _friend_count(cursor, owner_guid: int) -> int:
     return int(cursor.fetchone()["total"])
 
 
+def _friend_rows_db() -> list[dict[str, Any]]:
+    """Return the real AzerothCore friend list through the privileged helper."""
+    conn = _character_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    cs.guid,
+                    owner.name AS character_name,
+                    cs.friend AS friend_guid,
+                    friend.name AS friend_name,
+                    friend.level AS friend_level,
+                    friend.online AS friend_online,
+                    cs.flags,
+                    cs.note
+                FROM character_social cs
+                JOIN characters owner ON owner.guid = cs.guid
+                JOIN characters friend ON friend.guid = cs.friend
+                WHERE (cs.flags & %s) = %s
+                ORDER BY owner.name, friend.name
+            """, (FRIEND_FLAG, FRIEND_FLAG))
+            return list(cursor.fetchall())
+    finally:
+        conn.close()
+
+
 def _add_friend_direction(cursor, owner: dict, friend: dict, note: str) -> None:
     existing = _friend_row(cursor, owner["guid"], friend["guid"])
     if not existing and _friend_count(cursor, owner["guid"]) >= MAX_FRIENDS:
@@ -284,6 +310,11 @@ def _teleport_character(*, req: JCExecuteRequest, character: str, location: str)
     result = _perform_and_audit(meta=req, action="TELEPORT_PLAYER", target=character,
                                 command=command, details={"location": location, "source": "jc"})
     return {"canonical": "teleport", "character": character, "location": location, **result}
+
+
+@router.get("/admin-tools/friends")
+def list_friends():
+    return {"friends": _friend_rows_db()}
 
 
 @router.post("/admin-tools/friends/add")
@@ -371,8 +402,8 @@ def execute_jc(req: JCExecuteRequest):
     if canonical == "level":
         level = _parse_int(req.value, field="level", minimum=1, maximum=80)
         command = f"character level {character} {level}"
-        result = _perform_and_audit(meta=req, action="SET_LEVEL", target=character, command=command,
-                                    details={"level": level, "source": "jc"})
+        result = _perform_and_audit(meta=req, action="SET_LEVEL", target=character,
+                                    command=command, details={"level": level, "source": "jc"})
         return {"canonical": canonical, "character": character, "level": level, **result}
     if canonical == "gold":
         gold = _parse_int(req.value, field="gold", minimum=0, maximum=MAX_GOLD)
@@ -393,6 +424,7 @@ def execute_jc(req: JCExecuteRequest):
         item_id = _parse_int(req.value, field="item id", minimum=1, maximum=4_294_967_295)
         count = req.count
         item_name = ""
+
     command = f'send items {character} "Admin delivery" "Delivered by JMod /jc" {item_id}:{count}'
     result = _perform_and_audit(meta=req, action="SEND_ITEM", target=character, command=command,
                                 details={"item_id": item_id, "item_name": item_name,
