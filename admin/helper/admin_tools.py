@@ -31,6 +31,7 @@ AUDIT_PATH = Path("/opt/wow-admin/data/admin-audit.jsonl")
 ANSI_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 MAX_GOLD = 214748
 MAX_SPELL_ID = 4_294_967_295
+MAX_LOCATION_LEN = 120
 
 
 class AuditMeta(BaseModel):
@@ -55,8 +56,8 @@ class JCExecuteRequest(AuditMeta):
     """Structured request for the shared JMod/JesterConsole vocabulary.
 
     `value` is intentionally a string because its meaning depends on the
-    command: item alias/id, level, gold amount, or spell id. This keeps the
-    endpoint compact while command-specific validation remains server-side.
+    command: item alias/id, level, gold amount, spell id, or teleport name.
+    Command-specific validation remains server-side.
     """
 
     command: str = Field(min_length=1, max_length=32)
@@ -69,6 +70,16 @@ def _safe_name(value: str) -> str:
     value = value.strip()
     if not NAME_RE.fullmatch(value):
         raise HTTPException(status_code=400, detail="Invalid character name")
+    return value
+
+
+def _safe_location(value: str) -> str:
+    """Validate one game_tele location name before constructing a console line."""
+    value = " ".join((value or "").strip().split())
+    if not value or len(value) > MAX_LOCATION_LEN:
+        raise HTTPException(status_code=400, detail="Invalid teleport location")
+    if "\n" in value or "\r" in value:
+        raise HTTPException(status_code=400, detail="Invalid teleport location")
     return value
 
 
@@ -278,6 +289,25 @@ def _teach_spell(*, req: JCExecuteRequest, canonical: str, character: str, spell
     }
 
 
+def _teleport_character(*, req: JCExecuteRequest, character: str, location: str) -> dict[str, Any]:
+    """Teleport a named character using AzerothCore's game_tele-backed command."""
+    location = _safe_location(location)
+    command = f"teleport name {character} {location}"
+    result = _perform_and_audit(
+        meta=req,
+        action="TELEPORT_PLAYER",
+        target=character,
+        command=command,
+        details={"location": location, "source": "jc"},
+    )
+    return {
+        "canonical": "teleport",
+        "character": character,
+        "location": location,
+        **result,
+    }
+
+
 @router.post("/admin-tools/character/items")
 def send_items(req: SendItemsRequest):
     character = _safe_name(req.character)
@@ -317,7 +347,7 @@ def execute_jc(req: JCExecuteRequest):
     """Execute shared JMod commands through one validated backend.
 
     Supported now: help/?, info, item/add, level/lvl, gold/money,
-    mount/learnmount, and train/training/spell/learn.
+    mount/learnmount, train/training/spell/learn, and teleport/travel/tele.
     """
     canonical, spec = resolve_command(req.command)
     if canonical is None or spec is None:
@@ -336,7 +366,7 @@ def execute_jc(req: JCExecuteRequest):
         )
         return {"canonical": canonical, **result}
 
-    if canonical not in {"item", "level", "gold", "mount", "train"}:
+    if canonical not in {"item", "level", "gold", "mount", "train", "teleport"}:
         raise HTTPException(
             status_code=501,
             detail=f"Command '{canonical}' is registered but not executable yet",
@@ -360,6 +390,13 @@ def execute_jc(req: JCExecuteRequest):
         gold = _parse_int(req.value, field="gold", minimum=0, maximum=MAX_GOLD)
         result = _set_gold_by_character(req=req, character=character, gold=gold)
         return {"canonical": canonical, **result}
+
+    if canonical == "teleport":
+        return _teleport_character(
+            req=req,
+            character=character,
+            location=req.value,
+        )
 
     if canonical in {"mount", "train"}:
         spell_id = _parse_int(
