@@ -19,7 +19,7 @@
         .catalog-note{margin:2px 0 0;padding:12px 14px;border:1px solid rgba(0,225,255,.14);border-radius:8px;background:rgba(0,225,255,.035);color:#9cb2cf;font-size:13px;line-height:1.5}
         .catalog-note strong{color:#d6e8ff}
         .catalog-field{position:relative}
-        .catalog-results{display:none;position:absolute;z-index:50;top:calc(100% + 6px);left:0;right:0;max-height:340px;overflow-y:auto;border:1px solid rgba(0,225,255,.28);border-radius:10px;background:#071020;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+        .catalog-results{display:none;position:absolute;z-index:50;top:calc(100% + 6px);left:0;right:0;max-height:380px;overflow-y:auto;border:1px solid rgba(0,225,255,.28);border-radius:10px;background:#071020;box-shadow:0 18px 40px rgba(0,0,0,.45)}
         .catalog-results.open{display:block}
         .catalog-result{display:block;width:100%;padding:11px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#dbeafe;text-align:left;cursor:pointer}
         .catalog-result:last-child{border-bottom:0}
@@ -30,8 +30,9 @@
         .catalog-preview{display:none;padding:12px 14px;border:1px solid rgba(124,92,255,.23);border-radius:9px;background:rgba(124,92,255,.055)}
         .catalog-preview.open{display:block}
         .catalog-preview-title{font-weight:700;color:#fff;font-size:14px}
-        .catalog-preview-meta{margin-top:5px;color:#9cb2cf;font-size:12px;line-height:1.45}
-        .catalog-preview-description{margin-top:7px;color:#b7c9df;font-size:12px;line-height:1.45}
+        .catalog-preview-meta{margin-top:5px;color:#9cb2cf;font-size:12px;line-height:1.5}
+        .catalog-preview-description{margin-top:7px;color:#b7c9df;font-size:12px;line-height:1.5}
+        .catalog-preview-source{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);color:#7f96b4;font-size:11px;line-height:1.5}
         @media(max-width:900px){.tool-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -114,7 +115,7 @@
 
             <section class="panel tool-card">
                 <h2>Send Item</h2>
-                <p>Search the local JMod item catalog by friendly name or use an item ID.</p>
+                <p>Browse the local JMod item catalog or type to filter it.</p>
                 <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="item">
                     <select name="character" required>
@@ -122,19 +123,19 @@
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
                     <div class="catalog-field">
-                        <input class="catalog-lookup" data-catalog-type="item" name="value" placeholder="Item name or ID, e.g. Benediction" autocomplete="off" required>
+                        <input class="catalog-lookup" data-catalog-type="item" name="value" placeholder="Click to browse or type an item name / ID" autocomplete="off" required>
                         <div class="catalog-results" role="listbox"></div>
                     </div>
                     <div class="catalog-preview"></div>
                     <input name="count" type="number" min="1" max="1000" value="1" required>
-                    <div class="hint">Results show the exact ID plus level/rank details when the catalog has them.</div>
+                    <div class="hint">Click the field for a prefilled list. Type to narrow it down.</div>
                     <button class="primary-button" type="submit">Send Item</button>
                 </form>
             </section>
 
             <section class="panel tool-card">
                 <h2>Mount Manager</h2>
-                <p>Search the local mount catalog by friendly name or use a verified spell ID.</p>
+                <p>Browse the local mount catalog or type a friendly name / verified spell ID.</p>
                 <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="mount">
                     <select name="character" required>
@@ -142,7 +143,7 @@
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
                     <div class="catalog-field">
-                        <input class="catalog-lookup" data-catalog-type="mount" name="value" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
+                        <input class="catalog-lookup" data-catalog-type="mount" name="value" placeholder="Click to browse or type a mount name / spell ID" autocomplete="off" required>
                         <div class="catalog-results" role="listbox"></div>
                     </div>
                     <div class="catalog-preview"></div>
@@ -155,7 +156,7 @@
 
             <section class="panel tool-card">
                 <h2>Train Spell</h2>
-                <p>Search the full local Spell.dbc catalog and teach the selected spell directly.</p>
+                <p>Browse the full local Spell.dbc catalog and teach the selected spell directly.</p>
                 <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="train">
                     <select name="character" required>
@@ -163,20 +164,20 @@
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
                     <div class="catalog-field">
-                        <input class="catalog-lookup" data-catalog-type="spell" name="value" placeholder="Spell name or ID, e.g. Frostbolt" autocomplete="off" required>
+                        <input class="catalog-lookup" data-catalog-type="spell" name="value" placeholder="Click to browse or type a spell name / ID" autocomplete="off" required>
                         <div class="catalog-results" role="listbox"></div>
                     </div>
                     <div class="catalog-preview"></div>
-                    <div class="hint">Friendly names resolve to the verified 3.3.5a spell ID before the helper runs player learn.</div>
+                    <div class="hint">Click to browse. Friendly names resolve to the verified 3.3.5a spell ID before player learn runs.</div>
                     <button class="primary-button" type="submit">Train Spell</button>
                 </form>
             </section>
 
             <section class="panel tool-card">
                 <h2>Catalog Details</h2>
-                <p>Items, mounts, and spells now keep the selected catalog record visible before you execute it.</p>
+                <p>Selections now expose the local record and where JMod got it.</p>
                 <div class="catalog-note">
-                    <strong>Current detail set:</strong> friendly name, exact game ID, rank/short description, and required level where available. We can keep enriching this as more 3.3.5a sources are imported.
+                    <strong>Reference details:</strong> exact game ID, description/rank, requirements, category, source provider, source record, verification state, and useful imported metadata when available.
                 </div>
             </section>
         </div>
@@ -204,6 +205,19 @@
         }
     }
 
+    function metadataSummary(row) {
+        if (!row.metadata || typeof row.metadata !== 'object') return [];
+        const m = row.metadata;
+        const details = [];
+        if (m.map_id !== undefined) details.push(`Map ${m.map_id}`);
+        if (m.position_x !== undefined && m.position_y !== undefined) {
+            details.push(`X ${Number(m.position_x).toFixed(1)}, Y ${Number(m.position_y).toFixed(1)}`);
+        }
+        if (m.spell_level) details.push(`Spell level ${m.spell_level}`);
+        if (m.category) details.push(`DBC category ${m.category}`);
+        return details;
+    }
+
     function showPreview(input, row) {
         const {preview} = fieldParts(input);
         if (!preview) return;
@@ -218,6 +232,11 @@
         details.push(`${input.dataset.catalogType.toUpperCase()} ID ${row.id}`);
         if (row.rank) details.push(row.rank);
         if (row.level) details.push(`Required level ${row.level}`);
+        if (row.quality !== null && row.quality !== undefined) details.push(`Quality ${row.quality}`);
+        if (row.category) details.push(row.category);
+        if (row.subcategory) details.push(row.subcategory);
+        if (row.required_skill_id) details.push(`Skill ${row.required_skill_id}${row.required_skill_rank ? ` rank ${row.required_skill_rank}` : ''}`);
+        details.push(...metadataSummary(row));
 
         const meta = document.createElement('div');
         meta.className = 'catalog-preview-meta';
@@ -229,6 +248,18 @@
             description.className = 'catalog-preview-description';
             description.textContent = row.description;
             preview.appendChild(description);
+        }
+
+        const refs = [];
+        if (row.source_name || row.source_key) refs.push(`Source: ${row.source_name || row.source_key}`);
+        if (row.source_record_id) refs.push(`Record: ${row.source_record_id}`);
+        refs.push(row.verified ? 'Verified locally' : 'Not yet verified');
+        if (row.verified_at) refs.push(`Verified: ${row.verified_at}`);
+        if (refs.length) {
+            const source = document.createElement('div');
+            source.className = 'catalog-preview-source';
+            source.textContent = refs.join(' · ');
+            preview.appendChild(source);
         }
 
         preview.classList.add('open');
@@ -255,7 +286,7 @@
         if (!box) return;
 
         box.innerHTML = '';
-        if (query.length < 2 && !/^\d+$/.test(query)) {
+        if (query.length === 1 && !/^\d$/.test(query)) {
             box.classList.remove('open');
             clearPreview(input);
             return;
@@ -288,16 +319,18 @@
                 button.appendChild(title);
 
                 const details = [];
-                details.push(`${input.dataset.catalogType.toUpperCase()} ID ${row.id}`);
                 if (row.rank) details.push(row.rank);
-                if (row.level) details.push(`Required level ${row.level}`);
+                if (row.level) details.push(`Level ${row.level}`);
+                if (row.category) details.push(row.category);
+                if (row.source_name) details.push(row.source_name);
+                if (row.verified) details.push('verified');
                 const meta = document.createElement('small');
-                meta.textContent = details.join(' · ');
+                meta.textContent = details.length ? details.join(' · ') : `${input.dataset.catalogType.toUpperCase()} ID ${row.id}`;
                 button.appendChild(meta);
 
                 if (row.description) {
                     const desc = document.createElement('small');
-                    desc.textContent = row.description.length > 140 ? row.description.slice(0, 137) + '...' : row.description;
+                    desc.textContent = row.description.length > 150 ? row.description.slice(0, 147) + '...' : row.description;
                     button.appendChild(desc);
                 }
 
@@ -323,7 +356,7 @@
             timers.set(input, setTimeout(() => refreshCatalog(input), 160));
         });
         input.addEventListener('focus', () => {
-            if (input.value.trim().length >= 2 && !/\[\d+\]\s*$/.test(input.value)) refreshCatalog(input);
+            if (!/\[\d+\]\s*$/.test(input.value)) refreshCatalog(input);
         });
         input.addEventListener('keydown', event => {
             if (event.key === 'Escape') closeResults(input);
