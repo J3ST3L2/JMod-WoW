@@ -55,6 +55,7 @@ def helper_get(path: str):
 def helper_post(path: str, payload: dict):
     return _helper_request("POST", path, payload)
 
+
 router = APIRouter()
 jinja = Environment(
     loader=FileSystemLoader("/app/templates"),
@@ -171,7 +172,6 @@ def _resolve_item(text: str):
     exact = [i for i in matches if str(i["name"]).lower() == cleaned]
     if exact:
         return exact[0]
-    # Only auto-pick a fuzzy result when it is unambiguous enough.
     if len(matches) == 1:
         return matches[0]
     return {"ambiguous": matches}
@@ -220,6 +220,14 @@ def _catalog_entities(entity_type: str, query: str = "", limit: int = 500):
 
 def _resolve_catalog_entity(entity_type: str, text: str):
     cleaned = text.strip().strip('"\'')
+
+    # Dynamic autocomplete submits friendly labels like "Raven Lord [41252]".
+    # Strip the display label back to the authoritative numeric game ID.
+    selected = re.search(r"\[(\d+)\]\s*$", cleaned)
+    if selected:
+        matches = _catalog_entities(entity_type, selected.group(1), limit=1)
+        return matches[0] if matches else None
+
     matches = _catalog_entities(entity_type, cleaned, limit=15)
     if not matches:
         return None
@@ -243,19 +251,16 @@ def _render(name: str, **ctx):
 def _parse_god_prompt(prompt: str):
     text = " ".join(prompt.strip().split())
 
-    # max level Jestaj / max Jestaj
     m = re.fullmatch(r"(?i)(?:max(?:imum)?\s+level|max)\s+([A-Za-z][A-Za-z0-9_-]{1,31})", text)
     if m:
         return {"kind": "level", "character": m.group(1), "level": 80}
 
-    # set level Jestaj 70 / set Jestaj level 70
     m = re.fullmatch(r"(?i)set\s+level\s+([A-Za-z][A-Za-z0-9_-]{1,31})\s+(\d{1,2})", text)
     if not m:
         m = re.fullmatch(r"(?i)set\s+([A-Za-z][A-Za-z0-9_-]{1,31})\s+level\s+(\d{1,2})", text)
     if m:
         return {"kind": "level", "character": m.group(1), "level": int(m.group(2))}
 
-    # give Jestaj 4 glacial bags / give Jestaj Benediction
     m = re.fullmatch(r"(?i)(?:give|mail)\s+([A-Za-z][A-Za-z0-9_-]{1,31})\s+(.+)", text)
     if m:
         character = m.group(1)
@@ -371,13 +376,36 @@ def god_mode_execute(request: Request, prompt: str = Form(...)):
         )
 
 
+@router.get("/jmod-tools/catalog-search")
+def jmod_catalog_search(type: str, q: str = ""):
+    entity_type = type.strip().lower()
+    if entity_type not in {"item", "spell", "mount"}:
+        return {"results": []}
+
+    query = q.strip()
+    if not query:
+        return {"results": []}
+
+    rows = _catalog_entities(entity_type, query, limit=25)
+    return {
+        "results": [
+            {
+                "id": int(row["game_id"]),
+                "name": str(row["name"]),
+                "level": row.get("required_level"),
+                "rank": row.get("short_description"),
+            }
+            for row in rows
+        ]
+    }
+
+
 @router.get("/jmod", response_class=HTMLResponse)
 @router.get("/jmod-tools", response_class=HTMLResponse)
 def jmod_tools_page(request: Request):
     return _render(
         "jmod_tools.html",
         characters=_characters(),
-        mounts=_catalog_entities("mount", limit=500),
         message="",
         error="",
         result="",
@@ -403,9 +431,11 @@ def jmod_tools_execute(
         "prompt": f"web:{command} {character} {value}".strip(),
     }
 
+    canonical = command.strip().lower()
     resolved_label = ""
+
     try:
-        if command.strip().lower() in {"mount", "learnmount"}:
+        if canonical in {"mount", "learnmount"}:
             mount = _resolve_catalog_entity("mount", value)
             if not mount:
                 raise ValueError(f'No mount matched “{value}”. Try a mount name or spell ID.')
@@ -415,10 +445,44 @@ def jmod_tools_execute(
                     for row in mount["ambiguous"][:8]
                 )
                 raise ValueError(
-                    "That mount name is ambiguous. Use a more specific name or spell ID. Matches: " + choices
+                    "That mount name is ambiguous. Pick a catalog suggestion or use the spell ID. Matches: " + choices
                 )
             payload["value"] = str(mount["game_id"])
             resolved_label = f'{mount["name"]} ({mount["game_id"]})'
+
+        elif canonical in {"train", "training", "spell", "learn"}:
+            spell = _resolve_catalog_entity("spell", value)
+            if not spell:
+                raise ValueError(f'No spell matched “{value}”. Try a spell name or spell ID.')
+            if "ambiguous" in spell:
+                choices = ", ".join(
+                    f'{row["name"]} ({row["game_id"]})'
+                    for row in spell["ambiguous"][:8]
+                )
+                raise ValueError(
+                    "That spell name is ambiguous. Pick a catalog suggestion or use the spell ID. Matches: " + choices
+                )
+            payload["value"] = str(spell["game_id"])
+            resolved_label = f'{spell["name"]} ({spell["game_id"]})'
+
+        elif canonical in {"item", "add"}:
+            item = _resolve_catalog_entity("item", value)
+            if item and "ambiguous" in item:
+                choices = ", ".join(
+                    f'{row["name"]} ({row["game_id"]})'
+                    for row in item["ambiguous"][:8]
+                )
+                raise ValueError(
+                    "That item name is ambiguous. Pick a catalog suggestion or use the item ID. Matches: " + choices
+                )
+            if item:
+                payload["value"] = str(item["game_id"])
+                resolved_label = f'{item["name"]} ({item["game_id"]})'
+            else:
+                legacy_item = _resolve_item(value)
+                if legacy_item and "ambiguous" not in legacy_item:
+                    payload["value"] = str(legacy_item["entry"])
+                    resolved_label = f'{legacy_item["name"]} ({legacy_item["entry"]})'
 
         data = helper_post("/jc/execute", payload)
         if data.get("lines"):
@@ -439,7 +503,6 @@ def jmod_tools_execute(
     return _render(
         "jmod_tools.html",
         characters=_characters(),
-        mounts=_catalog_entities("mount", limit=500),
         message=message,
         error=error,
         result=result_text,
