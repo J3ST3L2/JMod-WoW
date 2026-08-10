@@ -313,6 +313,7 @@ def god_mode_execute(request: Request, prompt: str = Form(...)):
 
 
 @router.get("/jmod", response_class=HTMLResponse)
+@router.get("/jmod-tools", response_class=HTMLResponse)
 def jmod_tools_page(request: Request):
     return _render(
         "jmod_tools.html",
@@ -324,6 +325,7 @@ def jmod_tools_page(request: Request):
 
 
 @router.post("/jmod", response_class=HTMLResponse)
+@router.post("/jmod-tools", response_class=HTMLResponse)
 def jmod_tools_execute(
     request: Request,
     command: str = Form(...),
