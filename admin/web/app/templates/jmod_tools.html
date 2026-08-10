@@ -28,6 +28,8 @@
         .catalog-preview.open{display:block}.catalog-preview-title{font-weight:700;color:#fff;font-size:14px}.catalog-preview-meta{margin-top:5px;color:#9cb2cf;font-size:12px;line-height:1.5}.catalog-preview-description{margin-top:7px;color:#b7c9df;font-size:12px;line-height:1.5}.catalog-preview-source{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);color:#7f96b4;font-size:11px;line-height:1.5}
         .checkbox-row{display:flex;align-items:center;gap:10px;color:#9cb2cf;font-size:13px}.checkbox-row input{width:auto}
         .friend-list{margin-top:14px;display:grid;gap:8px}.friend-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) auto;gap:8px;align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.02);font-size:13px}.friend-row small{display:block;color:#7f96b4}.friend-row form{display:block}.friend-row button{white-space:nowrap}
+        .sync-box{margin-bottom:14px;padding:14px;border:1px solid rgba(77,255,195,.18);border-radius:10px;background:rgba(77,255,195,.04)}
+        .sync-box strong{display:block;margin-bottom:6px;color:#d9fff3}.sync-box p{margin:0 0 12px;font-size:13px;line-height:1.45}
         @media(max-width:900px){.tool-grid{grid-template-columns:1fr}.friend-row{grid-template-columns:1fr}}
     </style>
 </head>
@@ -54,15 +56,22 @@
 
             <section class="panel tool-card">
                 <h2>Friend Manager</h2>
-                <p>Add characters directly to the real AzerothCore friend list.</p>
+                <p>Keep every local character connected through AzerothCore's real friend list.</p>
+                <div class="sync-box">
+                    <strong>Everyone is friends</strong>
+                    <p>Creates every missing character-to-character friend link in <code>character_social</code>, skips self-links, preserves existing notes and ignore flags, and refuses to run if the 50-friend client limit would be exceeded.</p>
+                    <form method="post" action="/jmod-tools/friends/sync-all">
+                        <button class="primary-button" type="submit">Sync All Characters as Friends</button>
+                    </form>
+                </div>
                 <form method="post" action="/jmod-tools/friends/add">
                     <select name="character" required><option value="">Character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select>
                     <select name="friend" required><option value="">Friend...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select>
                     <input name="note" maxlength="48" placeholder="Friend note (optional, max 48 chars)">
                     <label class="checkbox-row"><input type="checkbox" name="mutual" value="1" checked> Add both characters to each other's friend list</label>
-                    <button class="primary-button" type="submit">Add Friend</button>
+                    <button class="secondary-button" type="submit">Add One Friend Manually</button>
                 </form>
-                <div class="catalog-note"><strong>Client behavior:</strong> this writes AzerothCore's <code>character_social</code> table. If an online client does not refresh immediately, relog that character.</div>
+                <div class="catalog-note"><strong>Client behavior:</strong> if a character is already online, relog after a sync so the 3.3.5a client reloads its social list.</div>
                 {% if friends %}
                 <div class="friend-list">
                     {% for f in friends %}
