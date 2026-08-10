@@ -113,15 +113,18 @@
 
             <section class="panel tool-card">
                 <h2>Teach Mount</h2>
-                <p>Teach a mount directly by spell ID using AzerothCore's named-player learn command.</p>
+                <p>Search the local JMod mount catalog by friendly name or use a verified spell ID.</p>
                 <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="mount">
                     <select name="character" required>
                         <option value="">Choose character...</option>
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
-                    <input name="value" type="number" min="1" placeholder="Mount spell ID" required>
-                    <div class="hint">Mount-name lookup comes next. This first version deliberately uses verified spell IDs.</div>
+                    <input name="value" list="mount-options" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
+                    <datalist id="mount-options">
+                        {% for m in mounts %}<option value="{{ m.name }}">Spell {{ m.game_id }}</option>{% endfor %}
+                    </datalist>
+                    <div class="hint">Names are resolved locally from the 3.3.5a-derived JMod catalog before the helper sends player learn.</div>
                     <button class="primary-button" type="submit">Teach Mount</button>
                 </form>
             </section>
@@ -143,7 +146,7 @@
 
             <section class="panel tool-card">
                 <h2>Coming Next</h2>
-                <p>Mount-name search, riding/class training profiles, presets, and richer spell catalogs will plug into these same handlers.</p>
+                <p>Spell-name training, riding/class training profiles, presets, and richer catalog-driven controls will plug into these same handlers.</p>
             </section>
         </div>
     </main>
