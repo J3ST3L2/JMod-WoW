@@ -178,41 +178,60 @@ def _resolve_item(text: str):
 
 
 def _catalog_entities(entity_type: str, query: str = "", limit: int = 500):
-    """Read friendly entities from JMod's local catalog using the web RO user."""
+    """Read catalog records plus provenance using the web read-only DB user."""
     query = query.strip()
     limit = max(1, min(int(limit), 1000))
     conn = get_db()
     try:
         with conn.cursor() as cur:
+            select_sql = """
+                SELECT
+                    ce.game_id,
+                    ce.name,
+                    ce.short_description,
+                    ce.description,
+                    ce.required_level,
+                    ce.required_skill_id,
+                    ce.required_skill_rank,
+                    ce.category,
+                    ce.subcategory,
+                    ce.quality,
+                    ce.source_record_id,
+                    ce.source_url,
+                    ce.verified,
+                    ce.last_verified_at,
+                    ce.metadata,
+                    cs.source_key,
+                    cs.display_name AS source_name,
+                    cs.source_type
+                FROM jmod.catalog_entities ce
+                LEFT JOIN jmod.catalog_sources cs ON cs.id = ce.source_id
+                WHERE ce.entity_type=%s AND ce.enabled=1
+            """
             if not query:
-                cur.execute(f"""
-                    SELECT game_id, name, short_description, description, required_level
-                    FROM jmod.catalog_entities
-                    WHERE entity_type=%s AND enabled=1
-                    ORDER BY name, game_id
-                    LIMIT {limit}
-                """, (entity_type,))
+                cur.execute(
+                    select_sql + f" ORDER BY ce.name, ce.game_id LIMIT {limit}",
+                    (entity_type,),
+                )
             elif query.isdigit():
-                cur.execute(f"""
-                    SELECT game_id, name, short_description, description, required_level
-                    FROM jmod.catalog_entities
-                    WHERE entity_type=%s AND enabled=1 AND game_id=%s
-                    ORDER BY name, game_id
-                    LIMIT {limit}
-                """, (entity_type, int(query)))
+                cur.execute(
+                    select_sql + f" AND ce.game_id=%s ORDER BY ce.name, ce.game_id LIMIT {limit}",
+                    (entity_type, int(query)),
+                )
             else:
-                cur.execute(f"""
-                    SELECT game_id, name, short_description, description, required_level
-                    FROM jmod.catalog_entities
-                    WHERE entity_type=%s AND enabled=1 AND name LIKE %s
-                    ORDER BY
-                        CASE WHEN LOWER(name)=LOWER(%s) THEN 0
-                             WHEN LOWER(name) LIKE LOWER(%s) THEN 1
-                             ELSE 2 END,
-                        name,
-                        game_id
-                    LIMIT {limit}
-                """, (entity_type, f"%{query}%", query, f"{query}%"))
+                cur.execute(
+                    select_sql + f"""
+                        AND ce.name LIKE %s
+                        ORDER BY
+                            CASE WHEN LOWER(ce.name)=LOWER(%s) THEN 0
+                                 WHEN LOWER(ce.name) LIKE LOWER(%s) THEN 1
+                                 ELSE 2 END,
+                            ce.name,
+                            ce.game_id
+                        LIMIT {limit}
+                    """,
+                    (entity_type, f"%{query}%", query, f"{query}%"),
+                )
             return list(cur.fetchall())
     finally:
         conn.close()
@@ -221,8 +240,6 @@ def _catalog_entities(entity_type: str, query: str = "", limit: int = 500):
 def _resolve_catalog_entity(entity_type: str, text: str):
     cleaned = text.strip().strip('"\'')
 
-    # Dynamic autocomplete submits friendly labels like "Raven Lord [41252]".
-    # Strip the display label back to the authoritative numeric game ID.
     selected = re.search(r"\[(\d+)\]\s*$", cleaned)
     if selected:
         matches = _catalog_entities(entity_type, selected.group(1), limit=1)
@@ -379,14 +396,19 @@ def god_mode_execute(request: Request, prompt: str = Form(...)):
 @router.get("/jmod-tools/catalog-search")
 def jmod_catalog_search(type: str, q: str = ""):
     entity_type = type.strip().lower()
-    if entity_type not in {"item", "spell", "mount"}:
+    if entity_type not in {"item", "spell", "mount", "teleport"}:
         return {"results": []}
 
-    query = q.strip()
-    if not query:
-        return {"results": []}
+    rows = _catalog_entities(entity_type, q.strip(), limit=50)
 
-    rows = _catalog_entities(entity_type, query, limit=25)
+    def clean_metadata(value):
+        if value is None or isinstance(value, (dict, list, int, float, bool)):
+            return value
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return value
+
     return {
         "results": [
             {
@@ -394,6 +416,20 @@ def jmod_catalog_search(type: str, q: str = ""):
                 "name": str(row["name"]),
                 "level": row.get("required_level"),
                 "rank": row.get("short_description"),
+                "description": row.get("description"),
+                "category": row.get("category"),
+                "subcategory": row.get("subcategory"),
+                "quality": row.get("quality"),
+                "required_skill_id": row.get("required_skill_id"),
+                "required_skill_rank": row.get("required_skill_rank"),
+                "source_key": row.get("source_key"),
+                "source_name": row.get("source_name"),
+                "source_type": row.get("source_type"),
+                "source_record_id": row.get("source_record_id"),
+                "source_url": row.get("source_url"),
+                "verified": bool(row.get("verified")),
+                "verified_at": row["last_verified_at"].isoformat() if row.get("last_verified_at") else None,
+                "metadata": clean_metadata(row.get("metadata")),
             }
             for row in rows
         ]
