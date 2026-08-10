@@ -18,6 +18,15 @@
         .hint{font-size:12px;color:#6f86a5;margin-top:-4px}
         .catalog-note{margin:2px 0 0;padding:12px 14px;border:1px solid rgba(0,225,255,.14);border-radius:8px;background:rgba(0,225,255,.035);color:#9cb2cf;font-size:13px;line-height:1.5}
         .catalog-note strong{color:#d6e8ff}
+        .catalog-field{position:relative}
+        .catalog-results{display:none;position:absolute;z-index:50;top:calc(100% + 6px);left:0;right:0;max-height:280px;overflow-y:auto;border:1px solid rgba(0,225,255,.28);border-radius:10px;background:#071020;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+        .catalog-results.open{display:block}
+        .catalog-result{display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#dbeafe;text-align:left;cursor:pointer}
+        .catalog-result:last-child{border-bottom:0}
+        .catalog-result:hover,.catalog-result.active{background:rgba(0,225,255,.09)}
+        .catalog-result strong{display:block;color:#fff;font-size:14px}
+        .catalog-result small{display:block;margin-top:3px;color:#8296b2;font-size:12px}
+        .catalog-empty{padding:11px 12px;color:#8296b2;font-size:13px}
         @media(max-width:900px){.tool-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -107,10 +116,12 @@
                         <option value="">Choose character...</option>
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
-                    <input class="catalog-lookup" data-catalog-type="item" data-list-id="item-options" name="value" list="item-options" placeholder="Item name or ID, e.g. Benediction" autocomplete="off" required>
-                    <datalist id="item-options"></datalist>
+                    <div class="catalog-field">
+                        <input class="catalog-lookup" data-catalog-type="item" name="value" placeholder="Item name or ID, e.g. Benediction" autocomplete="off" required>
+                        <div class="catalog-results" role="listbox"></div>
+                    </div>
                     <input name="count" type="number" min="1" max="1000" value="1" required>
-                    <div class="hint">Start typing a name. Results come from your local 3.3.5a JMod catalog.</div>
+                    <div class="hint">Start typing a name. Click a result to lock in its exact catalog ID.</div>
                     <button class="primary-button" type="submit">Send Item</button>
                 </form>
             </section>
@@ -124,8 +135,10 @@
                         <option value="">Choose character...</option>
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
-                    <input class="catalog-lookup" data-catalog-type="mount" data-list-id="mount-options" name="value" list="mount-options" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
-                    <datalist id="mount-options"></datalist>
+                    <div class="catalog-field">
+                        <input class="catalog-lookup" data-catalog-type="mount" name="value" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
+                        <div class="catalog-results" role="listbox"></div>
+                    </div>
                     <button class="primary-button" type="submit">Teach / Add Mount</button>
                     <div class="catalog-note">
                         <strong>To summon it:</strong> after the mount is taught, open the character's Mounts/Companions window in WoW, find the mount, and use it.
@@ -142,8 +155,10 @@
                         <option value="">Choose character...</option>
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
-                    <input class="catalog-lookup" data-catalog-type="spell" data-list-id="spell-options" name="value" list="spell-options" placeholder="Spell name or ID, e.g. Frostbolt" autocomplete="off" required>
-                    <datalist id="spell-options"></datalist>
+                    <div class="catalog-field">
+                        <input class="catalog-lookup" data-catalog-type="spell" name="value" placeholder="Spell name or ID, e.g. Frostbolt" autocomplete="off" required>
+                        <div class="catalog-results" role="listbox"></div>
+                    </div>
                     <div class="hint">Friendly names resolve to the verified 3.3.5a spell ID before the helper runs player learn.</div>
                     <button class="primary-button" type="submit">Train Spell</button>
                 </form>
@@ -151,9 +166,9 @@
 
             <section class="panel tool-card">
                 <h2>Catalog-Driven Controls</h2>
-                <p>Items, mounts, and direct spell training now share the same local JMod lookup path. Training profiles and presets can build on this catalog next without inventing another ID table.</p>
+                <p>Items, mounts, and direct spell training share the same local JMod lookup path.</p>
                 <div class="catalog-note">
-                    <strong>Lookup behavior:</strong> type at least two characters, choose a suggestion such as <code>Frostbolt [116]</code>, and JMod resolves that exact ID server-side. Duplicate names stay explicit instead of being guessed.
+                    <strong>Lookup behavior:</strong> type at least two characters, then click the visible result you want. Duplicate names always show their exact ID.
                 </div>
             </section>
         </div>
@@ -164,38 +179,99 @@
 (() => {
     const timers = new WeakMap();
 
-    async function refreshCatalog(input) {
-        const query = input.value.trim();
-        const list = document.getElementById(input.dataset.listId);
-        if (!list) return;
-        list.innerHTML = "";
-        if (query.length < 2 && !/^\d+$/.test(query)) return;
-
-        try {
-            const params = new URLSearchParams({type: input.dataset.catalogType, q: query});
-            const response = await fetch(`/jmod-tools/catalog-search?${params.toString()}`, {headers: {"Accept": "application/json"}});
-            if (!response.ok) return;
-            const payload = await response.json();
-            for (const row of payload.results || []) {
-                const option = document.createElement("option");
-                option.value = `${row.name} [${row.id}]`;
-                const details = [];
-                if (row.rank) details.push(row.rank);
-                if (row.level) details.push(`Level ${row.level}`);
-                option.label = details.length ? `${row.name} [${row.id}] - ${details.join(" · ")}` : `${row.name} [${row.id}]`;
-                list.appendChild(option);
-            }
-        } catch (_) {
-            // Lookup failure should not block manual numeric IDs.
+    function closeResults(input) {
+        const box = input.closest('.catalog-field')?.querySelector('.catalog-results');
+        if (box) {
+            box.classList.remove('open');
+            box.innerHTML = '';
         }
     }
 
-    for (const input of document.querySelectorAll(".catalog-lookup")) {
-        input.addEventListener("input", () => {
+    function chooseResult(input, row) {
+        input.value = `${row.name} [${row.id}]`;
+        closeResults(input);
+        input.focus();
+    }
+
+    async function refreshCatalog(input) {
+        const query = input.value.trim();
+        const box = input.closest('.catalog-field')?.querySelector('.catalog-results');
+        if (!box) return;
+
+        box.innerHTML = '';
+        if (query.length < 2 && !/^\d+$/.test(query)) {
+            box.classList.remove('open');
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({type: input.dataset.catalogType, q: query});
+            const response = await fetch(`/jmod-tools/catalog-search?${params.toString()}`, {
+                headers: {"Accept": "application/json"},
+                cache: "no-store"
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const payload = await response.json();
+            const rows = payload.results || [];
+
+            if (!rows.length) {
+                box.innerHTML = '<div class="catalog-empty">No catalog matches.</div>';
+                box.classList.add('open');
+                return;
+            }
+
+            for (const row of rows) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'catalog-result';
+
+                const title = document.createElement('strong');
+                title.textContent = `${row.name} [${row.id}]`;
+                button.appendChild(title);
+
+                const details = [];
+                if (row.rank) details.push(row.rank);
+                if (row.level) details.push(`Level ${row.level}`);
+                if (details.length) {
+                    const meta = document.createElement('small');
+                    meta.textContent = details.join(' · ');
+                    button.appendChild(meta);
+                }
+
+                button.addEventListener('mousedown', event => {
+                    event.preventDefault();
+                    chooseResult(input, row);
+                });
+                box.appendChild(button);
+            }
+
+            box.classList.add('open');
+        } catch (error) {
+            box.innerHTML = '<div class="catalog-empty">Catalog lookup failed. Numeric IDs still work.</div>';
+            box.classList.add('open');
+            console.error('JMod catalog lookup failed', error);
+        }
+    }
+
+    for (const input of document.querySelectorAll('.catalog-lookup')) {
+        input.addEventListener('input', () => {
             clearTimeout(timers.get(input));
-            timers.set(input, setTimeout(() => refreshCatalog(input), 180));
+            timers.set(input, setTimeout(() => refreshCatalog(input), 160));
+        });
+        input.addEventListener('focus', () => {
+            if (input.value.trim().length >= 2) refreshCatalog(input);
+        });
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeResults(input);
         });
     }
+
+    document.addEventListener('mousedown', event => {
+        for (const input of document.querySelectorAll('.catalog-lookup')) {
+            if (!input.closest('.catalog-field')?.contains(event.target)) closeResults(input);
+        }
+    });
 })();
 </script>
 </body>
