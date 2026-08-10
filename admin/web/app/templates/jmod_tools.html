@@ -19,14 +19,19 @@
         .catalog-note{margin:2px 0 0;padding:12px 14px;border:1px solid rgba(0,225,255,.14);border-radius:8px;background:rgba(0,225,255,.035);color:#9cb2cf;font-size:13px;line-height:1.5}
         .catalog-note strong{color:#d6e8ff}
         .catalog-field{position:relative}
-        .catalog-results{display:none;position:absolute;z-index:50;top:calc(100% + 6px);left:0;right:0;max-height:280px;overflow-y:auto;border:1px solid rgba(0,225,255,.28);border-radius:10px;background:#071020;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+        .catalog-results{display:none;position:absolute;z-index:50;top:calc(100% + 6px);left:0;right:0;max-height:340px;overflow-y:auto;border:1px solid rgba(0,225,255,.28);border-radius:10px;background:#071020;box-shadow:0 18px 40px rgba(0,0,0,.45)}
         .catalog-results.open{display:block}
-        .catalog-result{display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#dbeafe;text-align:left;cursor:pointer}
+        .catalog-result{display:block;width:100%;padding:11px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#dbeafe;text-align:left;cursor:pointer}
         .catalog-result:last-child{border-bottom:0}
         .catalog-result:hover,.catalog-result.active{background:rgba(0,225,255,.09)}
         .catalog-result strong{display:block;color:#fff;font-size:14px}
-        .catalog-result small{display:block;margin-top:3px;color:#8296b2;font-size:12px}
+        .catalog-result small{display:block;margin-top:4px;color:#8296b2;font-size:12px;line-height:1.35}
         .catalog-empty{padding:11px 12px;color:#8296b2;font-size:13px}
+        .catalog-preview{display:none;padding:12px 14px;border:1px solid rgba(124,92,255,.23);border-radius:9px;background:rgba(124,92,255,.055)}
+        .catalog-preview.open{display:block}
+        .catalog-preview-title{font-weight:700;color:#fff;font-size:14px}
+        .catalog-preview-meta{margin-top:5px;color:#9cb2cf;font-size:12px;line-height:1.45}
+        .catalog-preview-description{margin-top:7px;color:#b7c9df;font-size:12px;line-height:1.45}
         @media(max-width:900px){.tool-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -120,8 +125,9 @@
                         <input class="catalog-lookup" data-catalog-type="item" name="value" placeholder="Item name or ID, e.g. Benediction" autocomplete="off" required>
                         <div class="catalog-results" role="listbox"></div>
                     </div>
+                    <div class="catalog-preview"></div>
                     <input name="count" type="number" min="1" max="1000" value="1" required>
-                    <div class="hint">Start typing a name. Click a result to lock in its exact catalog ID.</div>
+                    <div class="hint">Results show the exact ID plus level/rank details when the catalog has them.</div>
                     <button class="primary-button" type="submit">Send Item</button>
                 </form>
             </section>
@@ -139,6 +145,7 @@
                         <input class="catalog-lookup" data-catalog-type="mount" name="value" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
                         <div class="catalog-results" role="listbox"></div>
                     </div>
+                    <div class="catalog-preview"></div>
                     <button class="primary-button" type="submit">Teach / Add Mount</button>
                     <div class="catalog-note">
                         <strong>To summon it:</strong> after the mount is taught, open the character's Mounts/Companions window in WoW, find the mount, and use it.
@@ -159,16 +166,17 @@
                         <input class="catalog-lookup" data-catalog-type="spell" name="value" placeholder="Spell name or ID, e.g. Frostbolt" autocomplete="off" required>
                         <div class="catalog-results" role="listbox"></div>
                     </div>
+                    <div class="catalog-preview"></div>
                     <div class="hint">Friendly names resolve to the verified 3.3.5a spell ID before the helper runs player learn.</div>
                     <button class="primary-button" type="submit">Train Spell</button>
                 </form>
             </section>
 
             <section class="panel tool-card">
-                <h2>Catalog-Driven Controls</h2>
-                <p>Items, mounts, and direct spell training share the same local JMod lookup path.</p>
+                <h2>Catalog Details</h2>
+                <p>Items, mounts, and spells now keep the selected catalog record visible before you execute it.</p>
                 <div class="catalog-note">
-                    <strong>Lookup behavior:</strong> type at least two characters, then click the visible result you want. Duplicate names always show their exact ID.
+                    <strong>Current detail set:</strong> friendly name, exact game ID, rank/short description, and required level where available. We can keep enriching this as more 3.3.5a sources are imported.
                 </div>
             </section>
         </div>
@@ -179,28 +187,77 @@
 (() => {
     const timers = new WeakMap();
 
+    function fieldParts(input) {
+        const field = input.closest('.catalog-field');
+        const form = input.closest('form');
+        return {
+            box: field?.querySelector('.catalog-results'),
+            preview: form?.querySelector('.catalog-preview')
+        };
+    }
+
     function closeResults(input) {
-        const box = input.closest('.catalog-field')?.querySelector('.catalog-results');
+        const {box} = fieldParts(input);
         if (box) {
             box.classList.remove('open');
             box.innerHTML = '';
         }
     }
 
+    function showPreview(input, row) {
+        const {preview} = fieldParts(input);
+        if (!preview) return;
+        preview.innerHTML = '';
+
+        const title = document.createElement('div');
+        title.className = 'catalog-preview-title';
+        title.textContent = `${row.name} [${row.id}]`;
+        preview.appendChild(title);
+
+        const details = [];
+        details.push(`${input.dataset.catalogType.toUpperCase()} ID ${row.id}`);
+        if (row.rank) details.push(row.rank);
+        if (row.level) details.push(`Required level ${row.level}`);
+
+        const meta = document.createElement('div');
+        meta.className = 'catalog-preview-meta';
+        meta.textContent = details.join(' · ');
+        preview.appendChild(meta);
+
+        if (row.description) {
+            const description = document.createElement('div');
+            description.className = 'catalog-preview-description';
+            description.textContent = row.description;
+            preview.appendChild(description);
+        }
+
+        preview.classList.add('open');
+    }
+
+    function clearPreview(input) {
+        const {preview} = fieldParts(input);
+        if (preview) {
+            preview.classList.remove('open');
+            preview.innerHTML = '';
+        }
+    }
+
     function chooseResult(input, row) {
         input.value = `${row.name} [${row.id}]`;
+        showPreview(input, row);
         closeResults(input);
         input.focus();
     }
 
     async function refreshCatalog(input) {
         const query = input.value.trim();
-        const box = input.closest('.catalog-field')?.querySelector('.catalog-results');
+        const {box} = fieldParts(input);
         if (!box) return;
 
         box.innerHTML = '';
         if (query.length < 2 && !/^\d+$/.test(query)) {
             box.classList.remove('open');
+            clearPreview(input);
             return;
         }
 
@@ -231,12 +288,17 @@
                 button.appendChild(title);
 
                 const details = [];
+                details.push(`${input.dataset.catalogType.toUpperCase()} ID ${row.id}`);
                 if (row.rank) details.push(row.rank);
-                if (row.level) details.push(`Level ${row.level}`);
-                if (details.length) {
-                    const meta = document.createElement('small');
-                    meta.textContent = details.join(' · ');
-                    button.appendChild(meta);
+                if (row.level) details.push(`Required level ${row.level}`);
+                const meta = document.createElement('small');
+                meta.textContent = details.join(' · ');
+                button.appendChild(meta);
+
+                if (row.description) {
+                    const desc = document.createElement('small');
+                    desc.textContent = row.description.length > 140 ? row.description.slice(0, 137) + '...' : row.description;
+                    button.appendChild(desc);
                 }
 
                 button.addEventListener('mousedown', event => {
@@ -256,11 +318,12 @@
 
     for (const input of document.querySelectorAll('.catalog-lookup')) {
         input.addEventListener('input', () => {
+            clearPreview(input);
             clearTimeout(timers.get(input));
             timers.set(input, setTimeout(() => refreshCatalog(input), 160));
         });
         input.addEventListener('focus', () => {
-            if (input.value.trim().length >= 2) refreshCatalog(input);
+            if (input.value.trim().length >= 2 && !/\[\d+\]\s*$/.test(input.value)) refreshCatalog(input);
         });
         input.addEventListener('keydown', event => {
             if (event.key === 'Escape') closeResults(input);
