@@ -114,7 +114,7 @@
             <section class="panel tool-card">
                 <h2>Teach Mount</h2>
                 <p>Search the local JMod mount catalog by friendly name or use a verified spell ID.</p>
-                <form method="post" action="/jmod-tools">
+                <form method="post" action="/jmod-tools" class="mount-form">
                     <input type="hidden" name="command" value="mount">
                     <select name="character" required>
                         <option value="">Choose character...</option>
@@ -122,9 +122,9 @@
                     </select>
                     <input name="value" list="mount-options" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
                     <datalist id="mount-options">
-                        {% for m in mounts %}<option value="{{ m.name }}">Spell {{ m.game_id }}</option>{% endfor %}
+                        {% for m in mounts %}<option value="{{ m.name }} [{{ m.game_id }}]"></option>{% endfor %}
                     </datalist>
-                    <div class="hint">Names are resolved locally from the 3.3.5a-derived JMod catalog before the helper sends player learn.</div>
+                    <div class="hint">Duplicate mount names are shown with their spell ID. Selecting one sends only the verified ID to the helper.</div>
                     <button class="primary-button" type="submit">Teach Mount</button>
                 </form>
             </section>
@@ -151,5 +151,14 @@
         </div>
     </main>
 </div>
+<script>
+for (const form of document.querySelectorAll('.mount-form')) {
+    form.addEventListener('submit', () => {
+        const input = form.querySelector('input[name="value"]');
+        const match = input.value.match(/\[(\d+)\]\s*$/);
+        if (match) input.value = match[1];
+    });
+}
+</script>
 </body>
 </html>
