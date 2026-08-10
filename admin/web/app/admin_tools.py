@@ -501,6 +501,21 @@ def jmod_tools_execute(
             payload["value"] = str(spell["game_id"])
             resolved_label = f'{spell["name"]} ({spell["game_id"]})'
 
+        elif canonical in {"teleport", "travel", "tele", "fasttravel"}:
+            destination = _resolve_catalog_entity("teleport", value)
+            if not destination:
+                raise ValueError(f'No teleport matched “{value}”. Pick a destination from the catalog.')
+            if "ambiguous" in destination:
+                choices = ", ".join(
+                    f'{row["name"]} ({row["game_id"]})'
+                    for row in destination["ambiguous"][:8]
+                )
+                raise ValueError(
+                    "That teleport name is ambiguous. Pick a catalog suggestion. Matches: " + choices
+                )
+            payload["value"] = str(destination["name"])
+            resolved_label = f'{destination["name"]} ({destination["game_id"]})'
+
         elif canonical in {"item", "add"}:
             item = _resolve_catalog_entity("item", value)
             if item and "ambiguous" in item:
