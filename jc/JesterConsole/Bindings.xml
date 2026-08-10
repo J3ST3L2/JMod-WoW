@@ -1,0 +1,5 @@
+<Bindings>
+    <Binding name="JESTERCONSOLE_TOGGLE" header="JESTERCONSOLE">
+        JesterConsole_Toggle()
+    </Binding>
+</Bindings>
