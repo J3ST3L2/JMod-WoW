@@ -50,23 +50,23 @@ COMMANDS: dict[str, dict[str, Any]] = {
         ],
     },
     "mount": {
-        "description": "Teach mount",
+        "description": "Teach a mount spell",
         "aliases": ["learnmount"],
-        "usage": "mount <character> <mount name|spell id>",
+        "usage": "mount <character> <spell id>",
         "target": "character",
         "arguments": [
             {"name": "character", "type": "character"},
-            {"name": "mount", "type": "mount"},
+            {"name": "spell_id", "type": "spell"},
         ],
     },
     "train": {
-        "description": "Train character",
-        "aliases": ["training"],
-        "usage": "train <character> <profile>",
+        "description": "Teach a spell directly without a trainer",
+        "aliases": ["training", "spell", "learn"],
+        "usage": "train <character> <spell id>",
         "target": "character",
         "arguments": [
             {"name": "character", "type": "character"},
-            {"name": "profile", "type": "training_profile"},
+            {"name": "spell_id", "type": "spell"},
         ],
     },
     "item": {
