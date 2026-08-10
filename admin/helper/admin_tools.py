@@ -270,6 +270,69 @@ def _remove_friend_direction(cursor, owner: dict, friend: dict) -> bool:
     return True
 
 
+def _sync_all_friends(req: AuditMeta) -> dict[str, Any]:
+    """Make every character a friend of every other character without losing notes/ignore flags."""
+    conn = _character_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) AS total FROM characters")
+            character_count = int(cursor.fetchone()["total"])
+            if character_count > MAX_FRIENDS + 1:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"All-friends sync would give each character {character_count - 1} friends, "
+                        f"which exceeds the Wrath/AzerothCore limit of {MAX_FRIENDS}."
+                    ),
+                )
+
+            cursor.execute(
+                "SELECT COUNT(*) AS total FROM character_social WHERE (flags & %s) = %s",
+                (FRIEND_FLAG, FRIEND_FLAG),
+            )
+            before = int(cursor.fetchone()["total"])
+
+            if character_count > 1:
+                cursor.execute("""
+                    INSERT INTO character_social (guid, friend, flags, note)
+                    SELECT owner.guid, friend.guid, %s, ''
+                    FROM characters owner
+                    JOIN characters friend ON friend.guid <> owner.guid
+                    ON DUPLICATE KEY UPDATE flags = (character_social.flags | VALUES(flags))
+                """, (FRIEND_FLAG,))
+
+            cursor.execute(
+                "SELECT COUNT(*) AS total FROM character_social WHERE (flags & %s) = %s",
+                (FRIEND_FLAG, FRIEND_FLAG),
+            )
+            after = int(cursor.fetchone()["total"])
+
+            expected = character_count * max(character_count - 1, 0)
+            details = {
+                "character_count": character_count,
+                "friend_links_before": before,
+                "friend_links_after": after,
+                "friend_links_added": max(after - before, 0),
+                "expected_friend_links": expected,
+                "source": "character_social",
+            }
+            _audit({
+                "actor": req.actor,
+                "request_ip": req.request_ip,
+                "action": "SYNC_ALL_FRIENDS",
+                "target": "all-characters",
+                "prompt": req.prompt,
+                "command": "database:sync character_social",
+                "status": "success",
+                "details": details,
+                "output": "",
+                "error": "",
+            })
+            return {"ok": True, **details}
+    finally:
+        conn.close()
+
+
 def _set_gold_by_character(*, req: JCExecuteRequest, character: str, gold: int) -> dict[str, Any]:
     copper = gold * 10_000
     conn = _character_db()
@@ -315,6 +378,11 @@ def _teleport_character(*, req: JCExecuteRequest, character: str, location: str)
 @router.get("/admin-tools/friends")
 def list_friends():
     return {"friends": _friend_rows_db()}
+
+
+@router.post("/admin-tools/friends/sync-all")
+def sync_all_friends(req: AuditMeta):
+    return _sync_all_friends(req)
 
 
 @router.post("/admin-tools/friends/add")
