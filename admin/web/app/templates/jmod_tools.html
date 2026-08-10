@@ -16,8 +16,8 @@
         .result-box pre{padding:0;white-space:pre-wrap}
         .ok-message{color:#4dffc3}.error-message{color:#ff9dbb}
         .hint{font-size:12px;color:#6f86a5;margin-top:-4px}
-        .mount-steps{margin:2px 0 0;padding:12px 14px;border:1px solid rgba(0,225,255,.14);border-radius:8px;background:rgba(0,225,255,.035);color:#9cb2cf;font-size:13px;line-height:1.5}
-        .mount-steps strong{color:#d6e8ff}
+        .catalog-note{margin:2px 0 0;padding:12px 14px;border:1px solid rgba(0,225,255,.14);border-radius:8px;background:rgba(0,225,255,.035);color:#9cb2cf;font-size:13px;line-height:1.5}
+        .catalog-note strong{color:#d6e8ff}
         @media(max-width:900px){.tool-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -100,62 +100,103 @@
 
             <section class="panel tool-card">
                 <h2>Send Item</h2>
-                <p>Mail an item by ID or a known JMod alias.</p>
+                <p>Search the local JMod item catalog by friendly name or use an item ID.</p>
                 <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="item">
                     <select name="character" required>
                         <option value="">Choose character...</option>
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
-                    <input name="value" placeholder="Item ID or alias" required>
+                    <input class="catalog-lookup" data-catalog-type="item" data-list-id="item-options" name="value" list="item-options" placeholder="Item name or ID, e.g. Benediction" autocomplete="off" required>
+                    <datalist id="item-options"></datalist>
                     <input name="count" type="number" min="1" max="1000" value="1" required>
+                    <div class="hint">Start typing a name. Results come from your local 3.3.5a JMod catalog.</div>
                     <button class="primary-button" type="submit">Send Item</button>
                 </form>
             </section>
 
             <section class="panel tool-card">
                 <h2>Mount Manager</h2>
-                <p>Teach a mount from the local 3.3.5a JMod catalog, then summon it normally in-game.</p>
+                <p>Search the local mount catalog by friendly name or use a verified spell ID.</p>
                 <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="mount">
                     <select name="character" required>
                         <option value="">Choose character...</option>
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
-                    <input name="value" list="mount-options" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
-                    <datalist id="mount-options">
-                        {% for m in mounts %}
-                            <option value="{{ m.game_id }}">{{ m.name }} [{{ m.game_id }}]</option>
-                        {% endfor %}
-                    </datalist>
+                    <input class="catalog-lookup" data-catalog-type="mount" data-list-id="mount-options" name="value" list="mount-options" placeholder="Mount name or spell ID, e.g. Raven Lord" autocomplete="off" required>
+                    <datalist id="mount-options"></datalist>
                     <button class="primary-button" type="submit">Teach / Add Mount</button>
-                    <div class="mount-steps">
-                        <strong>To summon it:</strong> after the mount is taught, open the character's Mounts/Companions window in WoW, find the mount, and use it. JMod can teach a named player from the server console; AzerothCore's normal cast/mount commands require an in-game selected target, so this page does not pretend it can remotely click the mount for you.
+                    <div class="catalog-note">
+                        <strong>To summon it:</strong> after the mount is taught, open the character's Mounts/Companions window in WoW, find the mount, and use it.
                     </div>
                 </form>
             </section>
 
             <section class="panel tool-card">
                 <h2>Train Spell</h2>
-                <p>Teach any spell directly without visiting a trainer.</p>
+                <p>Search the full local Spell.dbc catalog and teach the selected spell directly.</p>
                 <form method="post" action="/jmod-tools">
                     <input type="hidden" name="command" value="train">
                     <select name="character" required>
                         <option value="">Choose character...</option>
                         {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
                     </select>
-                    <input name="value" type="number" min="1" placeholder="Spell ID" required>
-                    <div class="hint">This uses player learn &lt;character&gt; &lt;spell id&gt; on your AzerothCore build.</div>
+                    <input class="catalog-lookup" data-catalog-type="spell" data-list-id="spell-options" name="value" list="spell-options" placeholder="Spell name or ID, e.g. Frostbolt" autocomplete="off" required>
+                    <datalist id="spell-options"></datalist>
+                    <div class="hint">Friendly names resolve to the verified 3.3.5a spell ID before the helper runs player learn.</div>
                     <button class="primary-button" type="submit">Train Spell</button>
                 </form>
             </section>
 
             <section class="panel tool-card">
-                <h2>Coming Next</h2>
-                <p>Spell-name training, riding/class training profiles, presets, and richer catalog-driven controls will plug into these same handlers.</p>
+                <h2>Catalog-Driven Controls</h2>
+                <p>Items, mounts, and direct spell training now share the same local JMod lookup path. Training profiles and presets can build on this catalog next without inventing another ID table.</p>
+                <div class="catalog-note">
+                    <strong>Lookup behavior:</strong> type at least two characters, choose a suggestion such as <code>Frostbolt [116]</code>, and JMod resolves that exact ID server-side. Duplicate names stay explicit instead of being guessed.
+                </div>
             </section>
         </div>
     </main>
 </div>
+
+<script>
+(() => {
+    const timers = new WeakMap();
+
+    async function refreshCatalog(input) {
+        const query = input.value.trim();
+        const list = document.getElementById(input.dataset.listId);
+        if (!list) return;
+        list.innerHTML = "";
+        if (query.length < 2 && !/^\d+$/.test(query)) return;
+
+        try {
+            const params = new URLSearchParams({type: input.dataset.catalogType, q: query});
+            const response = await fetch(`/jmod-tools/catalog-search?${params.toString()}`, {headers: {"Accept": "application/json"}});
+            if (!response.ok) return;
+            const payload = await response.json();
+            for (const row of payload.results || []) {
+                const option = document.createElement("option");
+                option.value = `${row.name} [${row.id}]`;
+                const details = [];
+                if (row.rank) details.push(row.rank);
+                if (row.level) details.push(`Level ${row.level}`);
+                option.label = details.length ? `${row.name} [${row.id}] - ${details.join(" · ")}` : `${row.name} [${row.id}]`;
+                list.appendChild(option);
+            }
+        } catch (_) {
+            // Lookup failure should not block manual numeric IDs.
+        }
+    }
+
+    for (const input of document.querySelectorAll(".catalog-lookup")) {
+        input.addEventListener("input", () => {
+            clearTimeout(timers.get(input));
+            timers.set(input, setTimeout(() => refreshCatalog(input), 180));
+        });
+    }
+})();
+</script>
 </body>
 </html>
