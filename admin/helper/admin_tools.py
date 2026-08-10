@@ -298,11 +298,11 @@ def set_level(req: LevelRequest):
 
 @router.post("/jc/execute")
 def execute_jc(req: JCExecuteRequest):
-    """Execute the first shared JMod commands through one validated backend.
+    """Execute shared JMod commands through one validated backend.
 
-    Supported now: item/add, level/lvl, gold/money, help/?. Registered commands
-    that are not implemented here return 501 instead of falling through to a
-    generic console proxy.
+    Supported now: help/?, info, item/add, level/lvl, gold/money. Registered
+    commands that are not implemented here return 501 instead of falling
+    through to a generic console proxy.
     """
     canonical, spec = resolve_command(req.command)
     if canonical is None or spec is None:
@@ -310,6 +310,16 @@ def execute_jc(req: JCExecuteRequest):
 
     if canonical == "help":
         return {"ok": True, "command": "help", "lines": help_lines()}
+
+    if canonical == "info":
+        result = _perform_and_audit(
+            meta=req,
+            action="SERVER_INFO",
+            target="server",
+            command="server info",
+            details={"source": "jc"},
+        )
+        return {"canonical": canonical, **result}
 
     if canonical not in {"item", "level", "gold"}:
         raise HTTPException(
