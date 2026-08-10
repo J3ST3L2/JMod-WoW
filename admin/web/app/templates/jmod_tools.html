@@ -114,6 +114,25 @@
             </section>
 
             <section class="panel tool-card">
+                <h2>Fast Travel</h2>
+                <p>Teleport a character using the 1,989 destinations imported from your server's game_tele table.</p>
+                <form method="post" action="/jmod-tools">
+                    <input type="hidden" name="command" value="teleport">
+                    <select name="character" required>
+                        <option value="">Choose character...</option>
+                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}{% if c.online %} (ONLINE){% endif %}</option>{% endfor %}
+                    </select>
+                    <div class="catalog-field">
+                        <input class="catalog-lookup" data-catalog-type="teleport" name="value" placeholder="Click to browse destinations or type a place name" autocomplete="off" required>
+                        <div class="catalog-results" role="listbox"></div>
+                    </div>
+                    <div class="catalog-preview"></div>
+                    <div class="hint">Click the field to get a prefilled destination list. Type something like Dalaran, Stormwind, Orgrimmar, Shattrath, or a zone name to filter.</div>
+                    <button class="primary-button" type="submit">Teleport Character</button>
+                </form>
+            </section>
+
+            <section class="panel tool-card">
                 <h2>Send Item</h2>
                 <p>Browse the local JMod item catalog or type to filter it.</p>
                 <form method="post" action="/jmod-tools">
@@ -175,9 +194,9 @@
 
             <section class="panel tool-card">
                 <h2>Catalog Details</h2>
-                <p>Selections now expose the local record and where JMod got it.</p>
+                <p>Selections expose the local record and where JMod got it.</p>
                 <div class="catalog-note">
-                    <strong>Reference details:</strong> exact game ID, description/rank, requirements, category, source provider, source record, verification state, and useful imported metadata when available.
+                    <strong>Reference details:</strong> exact game ID, descriptions/ranks, requirements, category, source provider, source record, verification state, imported metadata, and teleport map/coordinate data where available.
                 </div>
             </section>
         </div>
@@ -213,6 +232,8 @@
         if (m.position_x !== undefined && m.position_y !== undefined) {
             details.push(`X ${Number(m.position_x).toFixed(1)}, Y ${Number(m.position_y).toFixed(1)}`);
         }
+        if (m.position_z !== undefined) details.push(`Z ${Number(m.position_z).toFixed(1)}`);
+        if (m.orientation !== undefined) details.push(`Facing ${Number(m.orientation).toFixed(2)}`);
         if (m.spell_level) details.push(`Spell level ${m.spell_level}`);
         if (m.category) details.push(`DBC category ${m.category}`);
         return details;
@@ -324,6 +345,7 @@
                 if (row.category) details.push(row.category);
                 if (row.source_name) details.push(row.source_name);
                 if (row.verified) details.push('verified');
+                details.push(...metadataSummary(row));
                 const meta = document.createElement('small');
                 meta.textContent = details.length ? details.join(' · ') : `${input.dataset.catalogType.toUpperCase()} ID ${row.id}`;
                 button.appendChild(meta);
@@ -343,7 +365,7 @@
 
             box.classList.add('open');
         } catch (error) {
-            box.innerHTML = '<div class="catalog-empty">Catalog lookup failed. Numeric IDs still work.</div>';
+            box.innerHTML = '<div class="catalog-empty">Catalog lookup failed. Manual values still work where supported.</div>';
             box.classList.add('open');
             console.error('JMod catalog lookup failed', error);
         }
