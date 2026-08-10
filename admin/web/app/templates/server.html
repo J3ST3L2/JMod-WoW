@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <title>Server - JesterWoW Admin</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+</head>
+
+<body>
+
+<div class="shell">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="logo">
+                JT
+            </div>
+
+            <div class="brand-text">
+                <strong>JesterWoW</strong>
+                <small>Admin Console</small>
+            </div>
+
+        </div>
+
+        <nav>
+            <a href="/">Dashboard</a>
+            <a href="/accounts">Accounts</a>
+            <a href="/characters">Characters</a>
+            <a class="active" href="/server">Server</a>
+            <a href="/gear">Gear</a> <a href="/tools/god-mode">God Mode</a> <a href="/audit">Audit Log</a>
+        </nav>
+
+    </aside>
+
+
+    <main>
+
+        <header>
+
+            <div>
+                <h1>Server</h1>
+                <p>Live AzerothCore status and controls</p>
+            </div>
+
+            <div class="status">
+
+                {% if helper_online %}
+
+                    <span class="dot online"></span>
+                    Online
+
+                {% else %}
+
+                    <span class="dot offline"></span>
+                    Offline
+
+                {% endif %}
+
+            </div>
+
+        </header>
+
+
+        <section class="panel">
+
+            <div class="panel-title">
+                <h2>Worldserver Information</h2>
+            </div>
+
+            <pre>{{ server_info }}</pre>
+
+        </section>
+
+
+        <section class="panel">
+
+            <div class="panel-title">
+                <h2>Server Announcement</h2>
+            </div>
+
+            <div class="form-area">
+
+                <input
+                    type="text"
+                    placeholder="Message to all players"
+                    disabled
+                >
+
+                <button
+                    class="primary-button"
+                    disabled
+                >
+                    Announce
+                </button>
+
+                <small>
+                    Write operations will be enabled in the next phase.
+                </small>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+</body>
+</html>

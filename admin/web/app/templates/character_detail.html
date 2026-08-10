@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,initial-scale=1"
+    >
+
+    <title>
+        {{ character.name }} - JesterWoW Admin
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+<div class="shell">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="logo">
+                JT
+            </div>
+
+            <div class="brand-text">
+                <strong>JesterWoW</strong>
+                <small>Admin Console</small>
+            </div>
+
+        </div>
+
+        <nav>
+
+            <a href="/">
+                Dashboard
+            </a>
+
+            <a href="/accounts">
+                Accounts
+            </a>
+
+            <a
+                class="active"
+                href="/characters"
+            >
+                Characters
+            </a>
+
+            <a href="/server">
+                Server
+            </a>
+
+            <a href="/audit">
+                Audit Log
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+    <main>
+
+        <header>
+
+            <div>
+
+                <a
+                    class="back-link"
+                    href="/characters"
+                >
+                    ← Characters
+                </a>
+
+                <h1>
+                    {{ character.name }}
+                </h1>
+
+                <p>
+                    Account:
+                    {{ character.username }}
+                </p>
+
+            </div>
+
+
+            <div class="status">
+
+                {% if character.online %}
+
+                    <span class="dot online"></span>
+                    Online
+
+                {% else %}
+
+                    <span class="dot offline"></span>
+                    Offline
+
+                {% endif %}
+
+            </div>
+
+        </header>
+
+
+        <section class="cards">
+
+            <div class="card">
+
+                <span>Level</span>
+
+                <strong>
+                    {{ character.level }}
+                </strong>
+
+            </div>
+
+
+            <div class="card">
+
+                <span>Gold</span>
+
+                <strong>
+                    {{ character.money // 10000 }}g
+                </strong>
+
+            </div>
+
+
+            <div class="card">
+
+                <span>Played Time</span>
+
+                <strong>
+                    {{ character.totaltime // 3600 }}h
+                </strong>
+
+            </div>
+
+        </section>
+
+
+        <div class="action-grid">
+
+
+            <section class="panel">
+
+                <div class="panel-title">
+                    <h2>Level</h2>
+                </div>
+
+                <form
+                    class="form-area"
+                    method="post"
+                    action="/characters/{{ character.guid }}/level"
+                >
+
+                    <input
+                        type="hidden"
+                        name="character"
+                        value="{{ character.name }}"
+                    >
+
+                    <label>
+                        Character Level
+                    </label>
+
+                    <input
+                        type="number"
+                        name="level"
+                        min="1"
+                        max="80"
+                        value="{{ character.level }}"
+                        required
+                    >
+
+                    <button
+                        class="primary-button"
+                        type="submit"
+                    >
+                        Set Level
+                    </button>
+
+                </form>
+
+            </section>
+
+
+            <section class="panel">
+
+                <div class="panel-title">
+                    <h2>Money</h2>
+                </div>
+
+                <form
+                    class="form-area"
+                    method="post"
+                    action="/characters/{{ character.guid }}/money"
+                >
+
+                    <label>
+                        Gold
+                    </label>
+
+                    <input
+                        type="number"
+                        name="gold"
+                        min="0"
+                        value="{{ character.money // 10000 }}"
+                    >
+
+                    <label>
+                        Silver
+                    </label>
+
+                    <input
+                        type="number"
+                        name="silver"
+                        min="0"
+                        max="99"
+                        value="{{ (character.money // 100) % 100 }}"
+                    >
+
+                    <label>
+                        Copper
+                    </label>
+
+                    <input
+                        type="number"
+                        name="copper"
+                        min="0"
+                        max="99"
+                        value="{{ character.money % 100 }}"
+                    >
+
+                    <button
+                        class="primary-button"
+                        type="submit"
+                        {% if character.online %}
+                            disabled
+                        {% endif %}
+                    >
+                        Set Money
+                    </button>
+
+                    {% if character.online %}
+
+                    <small>
+                        Character must be offline before money
+                        can be changed safely.
+                    </small>
+
+                    {% endif %}
+
+                </form>
+
+            </section>
+
+
+            <section class="panel">
+
+                <div class="panel-title">
+                    <h2>Character Actions</h2>
+                </div>
+
+                <div class="button-stack">
+
+
+                    <form
+                        method="post"
+                        action="/characters/{{ character.guid }}/reset-talents"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="character"
+                            value="{{ character.name }}"
+                        >
+
+                        <button
+                            class="secondary-button"
+                            type="submit"
+                        >
+                            Reset Talents
+                        </button>
+
+                    </form>
+
+
+                    <form
+                        method="post"
+                        action="/characters/{{ character.guid }}/rename"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="character"
+                            value="{{ character.name }}"
+                        >
+
+                        <button
+                            class="secondary-button"
+                            type="submit"
+                        >
+                            Force Rename
+                        </button>
+
+                    </form>
+
+
+                    <form
+                        method="post"
+                        action="/characters/{{ character.guid }}/kick"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="character"
+                            value="{{ character.name }}"
+                        >
+
+                        <button
+                            class="danger-button"
+                            type="submit"
+                            {% if not character.online %}
+                                disabled
+                            {% endif %}
+                        >
+                            Kick Player
+                        </button>
+
+                    </form>
+
+
+                </div>
+
+            </section>
+
+
+        </div>
+
+    </main>
+
+</div>
+
+</body>
+
+</html>

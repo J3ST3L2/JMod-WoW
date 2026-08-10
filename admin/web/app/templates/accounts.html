@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <title>Accounts - JesterWoW Admin</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+</head>
+
+<body>
+
+<div class="shell">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="logo">
+                JT
+            </div>
+
+            <div class="brand-text">
+                <strong>JesterWoW</strong>
+                <small>Admin Console</small>
+            </div>
+
+        </div>
+
+        <nav>
+            <a href="/">Dashboard</a>
+            <a class="active" href="/accounts">Accounts</a>
+            <a href="/characters">Characters</a>
+            <a href="/server">Server</a>
+            <a href="/gear">Gear</a> <a href="/tools/god-mode">God Mode</a> <a href="/audit">Audit Log</a>
+        </nav>
+
+    </aside>
+
+
+    <main>
+
+        <header>
+
+            <div>
+                <h1>Accounts</h1>
+                <p>Player accounts and account status</p>
+            </div>
+
+            <button
+                class="primary-button"
+                disabled
+            >
+                Create Account
+            </button>
+
+        </header>
+
+
+        <section class="panel">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Characters</th>
+                        <th>Last Login</th>
+                        <th>Last IP</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for account in accounts %}
+
+                <tr>
+
+                    <td>
+                        <strong>
+                            {{ account.username }}
+                        </strong>
+                    </td>
+
+                    <td>
+                        {{ account.character_count }}
+                    </td>
+
+                    <td>
+                        {{ account.last_login or "Never" }}
+                    </td>
+
+                    <td>
+                        {{ account.last_ip or "-" }}
+                    </td>
+
+                    <td>
+
+                        {% if account.locked %}
+
+                            <span class="badge offline-badge">
+                                Locked
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge online-badge">
+                                Active
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+    </main>
+
+</div>
+
+</body>
+</html>

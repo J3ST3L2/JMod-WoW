@@ -43,3 +43,38 @@ WTF/
 Cache/
 Errors/
 Logs/
+
+# Python environments / caches
+venv/
+.venv/
+**/venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Runtime state
+run/
+**/run/
+*.sock
+*.pid
+
+# Backups and dumps
+backups/
+**/backups/
+*.bak
+*.bak.*
+*.sql.gz
+*.dump
+
+# Local databases / generated data
+*.sqlite
+*.sqlite3
