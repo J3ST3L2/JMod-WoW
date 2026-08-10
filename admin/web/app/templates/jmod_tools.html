@@ -12,8 +12,7 @@
         .tool-card p{margin:0 0 18px;color:#8296b2}
         .tool-card form{display:grid;gap:12px}
         .tool-card input,.tool-card select{width:100%;padding:12px 14px;border-radius:8px;border:1px solid rgba(0,225,255,.15);background:#080e20;color:white}
-        .result-box{padding:20px}
-        .result-box pre{padding:0;white-space:pre-wrap}
+        .result-box{padding:20px}.result-box pre{padding:0;white-space:pre-wrap}
         .ok-message{color:#4dffc3}.error-message{color:#ff9dbb}
         .hint{font-size:12px;color:#6f86a5;margin-top:-4px}
         .catalog-note{margin:2px 0 0;padding:12px 14px;border:1px solid rgba(0,225,255,.14);border-radius:8px;background:rgba(0,225,255,.035);color:#9cb2cf;font-size:13px;line-height:1.5}
@@ -22,183 +21,72 @@
         .catalog-results{display:none;position:absolute;z-index:50;top:calc(100% + 6px);left:0;right:0;max-height:380px;overflow-y:auto;border:1px solid rgba(0,225,255,.28);border-radius:10px;background:#071020;box-shadow:0 18px 40px rgba(0,0,0,.45)}
         .catalog-results.open{display:block}
         .catalog-result{display:block;width:100%;padding:11px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#dbeafe;text-align:left;cursor:pointer}
-        .catalog-result:last-child{border-bottom:0}
-        .catalog-result:hover,.catalog-result.active{background:rgba(0,225,255,.09)}
-        .catalog-result strong{display:block;color:#fff;font-size:14px}
-        .catalog-result small{display:block;margin-top:4px;color:#8296b2;font-size:12px;line-height:1.35}
+        .catalog-result:last-child{border-bottom:0}.catalog-result:hover{background:rgba(0,225,255,.09)}
+        .catalog-result strong{display:block;color:#fff;font-size:14px}.catalog-result small{display:block;margin-top:4px;color:#8296b2;font-size:12px;line-height:1.35}
         .catalog-empty{padding:11px 12px;color:#8296b2;font-size:13px}
         .catalog-preview{display:none;padding:12px 14px;border:1px solid rgba(124,92,255,.23);border-radius:9px;background:rgba(124,92,255,.055)}
-        .catalog-preview.open{display:block}
-        .catalog-preview-title{font-weight:700;color:#fff;font-size:14px}
-        .catalog-preview-meta{margin-top:5px;color:#9cb2cf;font-size:12px;line-height:1.5}
-        .catalog-preview-description{margin-top:7px;color:#b7c9df;font-size:12px;line-height:1.5}
-        .catalog-preview-source{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);color:#7f96b4;font-size:11px;line-height:1.5}
-        @media(max-width:900px){.tool-grid{grid-template-columns:1fr}}
+        .catalog-preview.open{display:block}.catalog-preview-title{font-weight:700;color:#fff;font-size:14px}.catalog-preview-meta{margin-top:5px;color:#9cb2cf;font-size:12px;line-height:1.5}.catalog-preview-description{margin-top:7px;color:#b7c9df;font-size:12px;line-height:1.5}.catalog-preview-source{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);color:#7f96b4;font-size:11px;line-height:1.5}
+        .checkbox-row{display:flex;align-items:center;gap:10px;color:#9cb2cf;font-size:13px}.checkbox-row input{width:auto}
+        .friend-list{margin-top:14px;display:grid;gap:8px}.friend-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) auto;gap:8px;align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.02);font-size:13px}.friend-row small{display:block;color:#7f96b4}.friend-row form{display:block}.friend-row button{white-space:nowrap}
+        @media(max-width:900px){.tool-grid{grid-template-columns:1fr}.friend-row{grid-template-columns:1fr}}
     </style>
 </head>
 <body>
 <div class="shell">
     <aside class="sidebar">
-        <div class="brand">
-            <div class="logo">JT</div>
-            <div class="brand-text"><strong>JesterWoW</strong><small>Admin Console</small></div>
-        </div>
+        <div class="brand"><div class="logo">JT</div><div class="brand-text"><strong>JesterWoW</strong><small>Admin Console</small></div></div>
         <nav>
-            <a href="/">Dashboard</a>
-            <a href="/accounts">Accounts</a>
-            <a href="/characters">Characters</a>
-            <a href="/server">Server</a>
-            <a href="/gear">Gear</a>
-            <a class="active" href="/jmod-tools">JMod Tools</a>
-            <a href="/tools/god-mode">God Mode</a>
-            <a href="/audit">Audit Log</a>
+            <a href="/">Dashboard</a><a href="/accounts">Accounts</a><a href="/characters">Characters</a><a href="/server">Server</a><a href="/gear">Gear</a><a class="active" href="/jmod-tools">JMod Tools</a><a href="/tools/god-mode">God Mode</a><a href="/audit">Audit Log</a>
         </nav>
     </aside>
     <main>
-        <header>
-            <div>
-                <h1>JMod Tools</h1>
-                <p>Shared admin commands backed by the JMod command registry</p>
-            </div>
-        </header>
-
+        <header><div><h1>JMod Tools</h1><p>Shared admin commands backed by the JMod command registry</p></div></header>
         {% if message %}<section class="panel"><div class="result-box ok-message">{{ message }}</div></section>{% endif %}
         {% if error %}<section class="panel"><div class="result-box error-message">{{ error }}</div></section>{% endif %}
         {% if result %}<section class="panel"><div class="panel-title"><h2>Command Result</h2></div><div class="result-box"><pre>{{ result }}</pre></div></section>{% endif %}
 
         <div class="tool-grid">
-            <section class="panel tool-card">
-                <h2>Server Info</h2>
-                <p>Query the live AzerothCore worldserver.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="info">
-                    <button class="primary-button" type="submit">Get Server Info</button>
-                </form>
-            </section>
+            <section class="panel tool-card"><h2>Server Info</h2><p>Query the live AzerothCore worldserver.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="info"><button class="primary-button" type="submit">Get Server Info</button></form></section>
+            <section class="panel tool-card"><h2>Command Help</h2><p>Show the commands currently registered in JMod.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="help"><button class="secondary-button" type="submit">Show Commands</button></form></section>
+
+            <section class="panel tool-card"><h2>Set Level</h2><p>Set a character level from 1 to 80.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="level"><select name="character" required><option value="">Choose character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }} (Level {{ c.level }})</option>{% endfor %}</select><input name="value" type="number" min="1" max="80" placeholder="Level" required><button class="primary-button" type="submit">Set Level</button></form></section>
+            <section class="panel tool-card"><h2>Set Gold</h2><p>Set exact gold for an offline character.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="gold"><select name="character" required><option value="">Choose character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}{% if c.online %} (ONLINE){% endif %}</option>{% endfor %}</select><input name="value" type="number" min="0" max="214748" placeholder="Gold" required><button class="primary-button" type="submit">Set Gold</button></form></section>
 
             <section class="panel tool-card">
-                <h2>Command Help</h2>
-                <p>Show the commands currently registered in JMod.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="help">
-                    <button class="secondary-button" type="submit">Show Commands</button>
+                <h2>Friend Manager</h2>
+                <p>Add characters directly to the real AzerothCore friend list.</p>
+                <form method="post" action="/jmod-tools/friends/add">
+                    <select name="character" required><option value="">Character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select>
+                    <select name="friend" required><option value="">Friend...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select>
+                    <input name="note" maxlength="48" placeholder="Friend note (optional, max 48 chars)">
+                    <label class="checkbox-row"><input type="checkbox" name="mutual" value="1" checked> Add both characters to each other's friend list</label>
+                    <button class="primary-button" type="submit">Add Friend</button>
                 </form>
-            </section>
-
-            <section class="panel tool-card">
-                <h2>Set Level</h2>
-                <p>Set a character level from 1 to 80.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="level">
-                    <select name="character" required>
-                        <option value="">Choose character...</option>
-                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }} (Level {{ c.level }})</option>{% endfor %}
-                    </select>
-                    <input name="value" type="number" min="1" max="80" placeholder="Level" required>
-                    <button class="primary-button" type="submit">Set Level</button>
-                </form>
-            </section>
-
-            <section class="panel tool-card">
-                <h2>Set Gold</h2>
-                <p>Set exact gold for an offline character.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="gold">
-                    <select name="character" required>
-                        <option value="">Choose character...</option>
-                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}{% if c.online %} (ONLINE){% endif %}</option>{% endfor %}
-                    </select>
-                    <input name="value" type="number" min="0" max="214748" placeholder="Gold" required>
-                    <button class="primary-button" type="submit">Set Gold</button>
-                </form>
-            </section>
-
-            <section class="panel tool-card">
-                <h2>Fast Travel</h2>
-                <p>Teleport a character using the 1,989 destinations imported from your server's game_tele table.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="teleport">
-                    <select name="character" required>
-                        <option value="">Choose character...</option>
-                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}{% if c.online %} (ONLINE){% endif %}</option>{% endfor %}
-                    </select>
-                    <div class="catalog-field">
-                        <input class="catalog-lookup" data-catalog-type="teleport" name="value" placeholder="Click to browse destinations or type a place name" autocomplete="off" required>
-                        <div class="catalog-results" role="listbox"></div>
+                <div class="catalog-note"><strong>Client behavior:</strong> this writes AzerothCore's <code>character_social</code> table. If an online client does not refresh immediately, relog that character.</div>
+                {% if friends %}
+                <div class="friend-list">
+                    {% for f in friends %}
+                    <div class="friend-row">
+                        <div><strong>{{ f.character_name }}</strong><small>has friend</small></div>
+                        <div><strong>{{ f.friend_name }}</strong><small>Level {{ f.friend_level }}{% if f.friend_online %} · ONLINE{% endif %}{% if f.note %} · {{ f.note }}{% endif %}</small></div>
+                        <form method="post" action="/jmod-tools/friends/remove">
+                            <input type="hidden" name="character" value="{{ f.character_name }}"><input type="hidden" name="friend" value="{{ f.friend_name }}"><input type="hidden" name="mutual" value="0"><button class="secondary-button" type="submit">Remove</button>
+                        </form>
                     </div>
-                    <div class="catalog-preview"></div>
-                    <div class="hint">Click the field to get a prefilled destination list. Type something like Dalaran, Stormwind, Orgrimmar, Shattrath, or a zone name to filter.</div>
-                    <button class="primary-button" type="submit">Teleport Character</button>
-                </form>
-            </section>
-
-            <section class="panel tool-card">
-                <h2>Send Item</h2>
-                <p>Browse the local JMod item catalog or type to filter it.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="item">
-                    <select name="character" required>
-                        <option value="">Choose character...</option>
-                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
-                    </select>
-                    <div class="catalog-field">
-                        <input class="catalog-lookup" data-catalog-type="item" name="value" placeholder="Click to browse or type an item name / ID" autocomplete="off" required>
-                        <div class="catalog-results" role="listbox"></div>
-                    </div>
-                    <div class="catalog-preview"></div>
-                    <input name="count" type="number" min="1" max="1000" value="1" required>
-                    <div class="hint">Click the field for a prefilled list. Type to narrow it down.</div>
-                    <button class="primary-button" type="submit">Send Item</button>
-                </form>
-            </section>
-
-            <section class="panel tool-card">
-                <h2>Mount Manager</h2>
-                <p>Browse the local mount catalog or type a friendly name / verified spell ID.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="mount">
-                    <select name="character" required>
-                        <option value="">Choose character...</option>
-                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
-                    </select>
-                    <div class="catalog-field">
-                        <input class="catalog-lookup" data-catalog-type="mount" name="value" placeholder="Click to browse or type a mount name / spell ID" autocomplete="off" required>
-                        <div class="catalog-results" role="listbox"></div>
-                    </div>
-                    <div class="catalog-preview"></div>
-                    <button class="primary-button" type="submit">Teach / Add Mount</button>
-                    <div class="catalog-note">
-                        <strong>To summon it:</strong> after the mount is taught, open the character's Mounts/Companions window in WoW, find the mount, and use it.
-                    </div>
-                </form>
-            </section>
-
-            <section class="panel tool-card">
-                <h2>Train Spell</h2>
-                <p>Browse the full local Spell.dbc catalog and teach the selected spell directly.</p>
-                <form method="post" action="/jmod-tools">
-                    <input type="hidden" name="command" value="train">
-                    <select name="character" required>
-                        <option value="">Choose character...</option>
-                        {% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
-                    </select>
-                    <div class="catalog-field">
-                        <input class="catalog-lookup" data-catalog-type="spell" name="value" placeholder="Click to browse or type a spell name / ID" autocomplete="off" required>
-                        <div class="catalog-results" role="listbox"></div>
-                    </div>
-                    <div class="catalog-preview"></div>
-                    <div class="hint">Click to browse. Friendly names resolve to the verified 3.3.5a spell ID before player learn runs.</div>
-                    <button class="primary-button" type="submit">Train Spell</button>
-                </form>
-            </section>
-
-            <section class="panel tool-card">
-                <h2>Catalog Details</h2>
-                <p>Selections expose the local record and where JMod got it.</p>
-                <div class="catalog-note">
-                    <strong>Reference details:</strong> exact game ID, descriptions/ranks, requirements, category, source provider, source record, verification state, imported metadata, and teleport map/coordinate data where available.
+                    {% endfor %}
                 </div>
+                {% endif %}
             </section>
+
+            <section class="panel tool-card"><h2>Fast Travel</h2><p>Teleport a character using the 1,989 destinations imported from your server's game_tele table.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="teleport"><select name="character" required><option value="">Choose character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}{% if c.online %} (ONLINE){% endif %}</option>{% endfor %}</select><div class="catalog-field"><input class="catalog-lookup" data-catalog-type="teleport" name="value" placeholder="Click to browse destinations or type a place name" autocomplete="off" required><div class="catalog-results" role="listbox"></div></div><div class="catalog-preview"></div><div class="hint">Click the field to get a prefilled destination list. Type a place name to filter.</div><button class="primary-button" type="submit">Teleport Character</button></form></section>
+
+            <section class="panel tool-card"><h2>Send Item</h2><p>Browse the local JMod item catalog or type to filter it.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="item"><select name="character" required><option value="">Choose character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select><div class="catalog-field"><input class="catalog-lookup" data-catalog-type="item" name="value" placeholder="Click to browse or type an item name / ID" autocomplete="off" required><div class="catalog-results" role="listbox"></div></div><div class="catalog-preview"></div><input name="count" type="number" min="1" max="1000" value="1" required><div class="hint">Click the field for a prefilled list. Type to narrow it down.</div><button class="primary-button" type="submit">Send Item</button></form></section>
+
+            <section class="panel tool-card"><h2>Mount Manager</h2><p>Browse the local mount catalog or type a friendly name / verified spell ID.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="mount"><select name="character" required><option value="">Choose character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select><div class="catalog-field"><input class="catalog-lookup" data-catalog-type="mount" name="value" placeholder="Click to browse or type a mount name / spell ID" autocomplete="off" required><div class="catalog-results" role="listbox"></div></div><div class="catalog-preview"></div><button class="primary-button" type="submit">Teach / Add Mount</button><div class="catalog-note"><strong>To summon it:</strong> after the mount is taught, open the character's Mounts/Companions window in WoW, find the mount, and use it.</div></form></section>
+
+            <section class="panel tool-card"><h2>Train Spell</h2><p>Browse the full local Spell.dbc catalog and teach the selected spell directly.</p><form method="post" action="/jmod-tools"><input type="hidden" name="command" value="train"><select name="character" required><option value="">Choose character...</option>{% for c in characters %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select><div class="catalog-field"><input class="catalog-lookup" data-catalog-type="spell" name="value" placeholder="Click to browse or type a spell name / ID" autocomplete="off" required><div class="catalog-results" role="listbox"></div></div><div class="catalog-preview"></div><div class="hint">Friendly names resolve to the verified 3.3.5a spell ID before player learn runs.</div><button class="primary-button" type="submit">Train Spell</button></form></section>
+
+            <section class="panel tool-card"><h2>Catalog Details</h2><p>Selections expose the local record and where JMod got it.</p><div class="catalog-note"><strong>Reference details:</strong> exact game ID, descriptions/ranks, requirements, category, source provider, source record, verification state, imported metadata, and teleport map/coordinate data where available.</div></section>
         </div>
     </main>
 </div>
@@ -206,190 +94,15 @@
 <script>
 (() => {
     const timers = new WeakMap();
-
-    function fieldParts(input) {
-        const field = input.closest('.catalog-field');
-        const form = input.closest('form');
-        return {
-            box: field?.querySelector('.catalog-results'),
-            preview: form?.querySelector('.catalog-preview')
-        };
-    }
-
-    function closeResults(input) {
-        const {box} = fieldParts(input);
-        if (box) {
-            box.classList.remove('open');
-            box.innerHTML = '';
-        }
-    }
-
-    function metadataSummary(row) {
-        if (!row.metadata || typeof row.metadata !== 'object') return [];
-        const m = row.metadata;
-        const details = [];
-        if (m.map_id !== undefined) details.push(`Map ${m.map_id}`);
-        if (m.position_x !== undefined && m.position_y !== undefined) {
-            details.push(`X ${Number(m.position_x).toFixed(1)}, Y ${Number(m.position_y).toFixed(1)}`);
-        }
-        if (m.position_z !== undefined) details.push(`Z ${Number(m.position_z).toFixed(1)}`);
-        if (m.orientation !== undefined) details.push(`Facing ${Number(m.orientation).toFixed(2)}`);
-        if (m.spell_level) details.push(`Spell level ${m.spell_level}`);
-        if (m.category) details.push(`DBC category ${m.category}`);
-        return details;
-    }
-
-    function showPreview(input, row) {
-        const {preview} = fieldParts(input);
-        if (!preview) return;
-        preview.innerHTML = '';
-
-        const title = document.createElement('div');
-        title.className = 'catalog-preview-title';
-        title.textContent = `${row.name} [${row.id}]`;
-        preview.appendChild(title);
-
-        const details = [];
-        details.push(`${input.dataset.catalogType.toUpperCase()} ID ${row.id}`);
-        if (row.rank) details.push(row.rank);
-        if (row.level) details.push(`Required level ${row.level}`);
-        if (row.quality !== null && row.quality !== undefined) details.push(`Quality ${row.quality}`);
-        if (row.category) details.push(row.category);
-        if (row.subcategory) details.push(row.subcategory);
-        if (row.required_skill_id) details.push(`Skill ${row.required_skill_id}${row.required_skill_rank ? ` rank ${row.required_skill_rank}` : ''}`);
-        details.push(...metadataSummary(row));
-
-        const meta = document.createElement('div');
-        meta.className = 'catalog-preview-meta';
-        meta.textContent = details.join(' · ');
-        preview.appendChild(meta);
-
-        if (row.description) {
-            const description = document.createElement('div');
-            description.className = 'catalog-preview-description';
-            description.textContent = row.description;
-            preview.appendChild(description);
-        }
-
-        const refs = [];
-        if (row.source_name || row.source_key) refs.push(`Source: ${row.source_name || row.source_key}`);
-        if (row.source_record_id) refs.push(`Record: ${row.source_record_id}`);
-        refs.push(row.verified ? 'Verified locally' : 'Not yet verified');
-        if (row.verified_at) refs.push(`Verified: ${row.verified_at}`);
-        if (refs.length) {
-            const source = document.createElement('div');
-            source.className = 'catalog-preview-source';
-            source.textContent = refs.join(' · ');
-            preview.appendChild(source);
-        }
-
-        preview.classList.add('open');
-    }
-
-    function clearPreview(input) {
-        const {preview} = fieldParts(input);
-        if (preview) {
-            preview.classList.remove('open');
-            preview.innerHTML = '';
-        }
-    }
-
-    function chooseResult(input, row) {
-        input.value = `${row.name} [${row.id}]`;
-        showPreview(input, row);
-        closeResults(input);
-        input.focus();
-    }
-
-    async function refreshCatalog(input) {
-        const query = input.value.trim();
-        const {box} = fieldParts(input);
-        if (!box) return;
-
-        box.innerHTML = '';
-        if (query.length === 1 && !/^\d$/.test(query)) {
-            box.classList.remove('open');
-            clearPreview(input);
-            return;
-        }
-
-        try {
-            const params = new URLSearchParams({type: input.dataset.catalogType, q: query});
-            const response = await fetch(`/jmod-tools/catalog-search?${params.toString()}`, {
-                headers: {"Accept": "application/json"},
-                cache: "no-store"
-            });
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const payload = await response.json();
-            const rows = payload.results || [];
-
-            if (!rows.length) {
-                box.innerHTML = '<div class="catalog-empty">No catalog matches.</div>';
-                box.classList.add('open');
-                return;
-            }
-
-            for (const row of rows) {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'catalog-result';
-
-                const title = document.createElement('strong');
-                title.textContent = `${row.name} [${row.id}]`;
-                button.appendChild(title);
-
-                const details = [];
-                if (row.rank) details.push(row.rank);
-                if (row.level) details.push(`Level ${row.level}`);
-                if (row.category) details.push(row.category);
-                if (row.source_name) details.push(row.source_name);
-                if (row.verified) details.push('verified');
-                details.push(...metadataSummary(row));
-                const meta = document.createElement('small');
-                meta.textContent = details.length ? details.join(' · ') : `${input.dataset.catalogType.toUpperCase()} ID ${row.id}`;
-                button.appendChild(meta);
-
-                if (row.description) {
-                    const desc = document.createElement('small');
-                    desc.textContent = row.description.length > 150 ? row.description.slice(0, 147) + '...' : row.description;
-                    button.appendChild(desc);
-                }
-
-                button.addEventListener('mousedown', event => {
-                    event.preventDefault();
-                    chooseResult(input, row);
-                });
-                box.appendChild(button);
-            }
-
-            box.classList.add('open');
-        } catch (error) {
-            box.innerHTML = '<div class="catalog-empty">Catalog lookup failed. Manual values still work where supported.</div>';
-            box.classList.add('open');
-            console.error('JMod catalog lookup failed', error);
-        }
-    }
-
-    for (const input of document.querySelectorAll('.catalog-lookup')) {
-        input.addEventListener('input', () => {
-            clearPreview(input);
-            clearTimeout(timers.get(input));
-            timers.set(input, setTimeout(() => refreshCatalog(input), 160));
-        });
-        input.addEventListener('focus', () => {
-            if (!/\[\d+\]\s*$/.test(input.value)) refreshCatalog(input);
-        });
-        input.addEventListener('keydown', event => {
-            if (event.key === 'Escape') closeResults(input);
-        });
-    }
-
-    document.addEventListener('mousedown', event => {
-        for (const input of document.querySelectorAll('.catalog-lookup')) {
-            if (!input.closest('.catalog-field')?.contains(event.target)) closeResults(input);
-        }
-    });
+    function fieldParts(input){const field=input.closest('.catalog-field');const form=input.closest('form');return{box:field?.querySelector('.catalog-results'),preview:form?.querySelector('.catalog-preview')}}
+    function closeResults(input){const{box}=fieldParts(input);if(box){box.classList.remove('open');box.innerHTML=''}}
+    function metadataSummary(row){if(!row.metadata||typeof row.metadata!=='object')return[];const m=row.metadata;const d=[];if(m.map_id!==undefined)d.push(`Map ${m.map_id}`);if(m.position_x!==undefined&&m.position_y!==undefined)d.push(`X ${Number(m.position_x).toFixed(1)}, Y ${Number(m.position_y).toFixed(1)}`);if(m.position_z!==undefined)d.push(`Z ${Number(m.position_z).toFixed(1)}`);if(m.orientation!==undefined)d.push(`Facing ${Number(m.orientation).toFixed(2)}`);if(m.spell_level)d.push(`Spell level ${m.spell_level}`);if(m.category)d.push(`DBC category ${m.category}`);return d}
+    function showPreview(input,row){const{preview}=fieldParts(input);if(!preview)return;preview.innerHTML='';const title=document.createElement('div');title.className='catalog-preview-title';title.textContent=`${row.name} [${row.id}]`;preview.appendChild(title);const details=[`${input.dataset.catalogType.toUpperCase()} ID ${row.id}`];if(row.rank)details.push(row.rank);if(row.level)details.push(`Required level ${row.level}`);if(row.quality!==null&&row.quality!==undefined)details.push(`Quality ${row.quality}`);if(row.category)details.push(row.category);if(row.subcategory)details.push(row.subcategory);if(row.required_skill_id)details.push(`Skill ${row.required_skill_id}${row.required_skill_rank?` rank ${row.required_skill_rank}`:''}`);details.push(...metadataSummary(row));const meta=document.createElement('div');meta.className='catalog-preview-meta';meta.textContent=details.join(' · ');preview.appendChild(meta);if(row.description){const desc=document.createElement('div');desc.className='catalog-preview-description';desc.textContent=row.description;preview.appendChild(desc)}const refs=[];if(row.source_name||row.source_key)refs.push(`Source: ${row.source_name||row.source_key}`);if(row.source_record_id)refs.push(`Record: ${row.source_record_id}`);refs.push(row.verified?'Verified locally':'Not yet verified');if(row.verified_at)refs.push(`Verified: ${row.verified_at}`);const source=document.createElement('div');source.className='catalog-preview-source';source.textContent=refs.join(' · ');preview.appendChild(source);preview.classList.add('open')}
+    function clearPreview(input){const{preview}=fieldParts(input);if(preview){preview.classList.remove('open');preview.innerHTML=''}}
+    function chooseResult(input,row){input.value=`${row.name} [${row.id}]`;showPreview(input,row);closeResults(input);input.focus()}
+    async function refreshCatalog(input){const query=input.value.trim();const{box}=fieldParts(input);if(!box)return;box.innerHTML='';if(query.length===1&&!/^\d$/.test(query)){box.classList.remove('open');clearPreview(input);return}try{const params=new URLSearchParams({type:input.dataset.catalogType,q:query});const response=await fetch(`/jmod-tools/catalog-search?${params.toString()}`,{headers:{Accept:'application/json'},cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const payload=await response.json();const rows=payload.results||[];if(!rows.length){box.innerHTML='<div class="catalog-empty">No catalog matches.</div>';box.classList.add('open');return}for(const row of rows){const button=document.createElement('button');button.type='button';button.className='catalog-result';const title=document.createElement('strong');title.textContent=`${row.name} [${row.id}]`;button.appendChild(title);const details=[];if(row.rank)details.push(row.rank);if(row.level)details.push(`Level ${row.level}`);if(row.category)details.push(row.category);if(row.source_name)details.push(row.source_name);if(row.verified)details.push('verified');details.push(...metadataSummary(row));const meta=document.createElement('small');meta.textContent=details.length?details.join(' · '):`${input.dataset.catalogType.toUpperCase()} ID ${row.id}`;button.appendChild(meta);if(row.description){const desc=document.createElement('small');desc.textContent=row.description.length>150?row.description.slice(0,147)+'...':row.description;button.appendChild(desc)}button.addEventListener('mousedown',event=>{event.preventDefault();chooseResult(input,row)});box.appendChild(button)}box.classList.add('open')}catch(error){box.innerHTML='<div class="catalog-empty">Catalog lookup failed. Manual values still work where supported.</div>';box.classList.add('open');console.error('JMod catalog lookup failed',error)}}
+    for(const input of document.querySelectorAll('.catalog-lookup')){input.addEventListener('input',()=>{clearPreview(input);clearTimeout(timers.get(input));timers.set(input,setTimeout(()=>refreshCatalog(input),160))});input.addEventListener('focus',()=>{if(!/\[\d+\]\s*$/.test(input.value))refreshCatalog(input)});input.addEventListener('keydown',event=>{if(event.key==='Escape')closeResults(input)})}
+    document.addEventListener('mousedown',event=>{for(const input of document.querySelectorAll('.catalog-lookup')){if(!input.closest('.catalog-field')?.contains(event.target))closeResults(input)}})
 })();
 </script>
 </body>
