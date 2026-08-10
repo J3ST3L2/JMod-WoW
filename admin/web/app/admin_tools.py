@@ -312,6 +312,59 @@ def god_mode_execute(request: Request, prompt: str = Form(...)):
         )
 
 
+@router.get("/jmod", response_class=HTMLResponse)
+def jmod_tools_page(request: Request):
+    return _render(
+        "jmod_tools.html",
+        characters=_characters(),
+        message="",
+        error="",
+        result="",
+    )
+
+
+@router.post("/jmod", response_class=HTMLResponse)
+def jmod_tools_execute(
+    request: Request,
+    command: str = Form(...),
+    character: str = Form(""),
+    value: str = Form(""),
+    count: int = Form(1),
+):
+    payload = {
+        "command": command,
+        "character": character,
+        "value": value,
+        "count": max(1, min(int(count), 1000)),
+        "actor": "web-admin",
+        "request_ip": _client_ip(request),
+        "prompt": f"web:{command} {character} {value}".strip(),
+    }
+
+    try:
+        data = helper_post("/jc/execute", payload)
+        if data.get("lines"):
+            result_text = "\n".join(str(line) for line in data["lines"])
+        elif data.get("output"):
+            result_text = str(data["output"])
+        else:
+            result_text = json.dumps(data, indent=2, sort_keys=True)
+        message = f"Executed JMod command: {data.get('canonical', data.get('command', command))}"
+        error = ""
+    except Exception as exc:
+        result_text = ""
+        message = ""
+        error = str(exc)
+
+    return _render(
+        "jmod_tools.html",
+        characters=_characters(),
+        message=message,
+        error=error,
+        result=result_text,
+    )
+
+
 @router.get("/audit", response_class=HTMLResponse)
 def audit_page(request: Request):
     try:
