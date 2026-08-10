@@ -32,6 +32,8 @@ ANSI_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 MAX_GOLD = 214748
 MAX_SPELL_ID = 4_294_967_295
 MAX_LOCATION_LEN = 120
+MAX_FRIENDS = 50
+FRIEND_FLAG = 1
 
 
 class AuditMeta(BaseModel):
@@ -52,13 +54,15 @@ class LevelRequest(AuditMeta):
     level: int = Field(ge=1, le=80)
 
 
-class JCExecuteRequest(AuditMeta):
-    """Structured request for the shared JMod/JesterConsole vocabulary.
+class FriendRequest(AuditMeta):
+    character: str
+    friend: str
+    note: str = Field(default="", max_length=48)
+    mutual: bool = True
 
-    `value` is intentionally a string because its meaning depends on the
-    command: item alias/id, level, gold amount, spell id, or teleport name.
-    Command-specific validation remains server-side.
-    """
+
+class JCExecuteRequest(AuditMeta):
+    """Structured request for the shared JMod/JesterConsole vocabulary."""
 
     command: str = Field(min_length=1, max_length=32)
     character: str = Field(default="", max_length=32)
@@ -74,7 +78,6 @@ def _safe_name(value: str) -> str:
 
 
 def _safe_location(value: str) -> str:
-    """Validate one game_tele location name before constructing a console line."""
     value = " ".join((value or "").strip().split())
     if not value or len(value) > MAX_LOCATION_LEN:
         raise HTTPException(status_code=400, detail="Invalid teleport location")
@@ -89,7 +92,6 @@ def _clean_output(value: str) -> str:
 
 
 def _send_worldserver_command(command: str, read_seconds: float = 0.8) -> str:
-    """Send one preconstructed allow-listed command to worldserver stdin."""
     if "\n" in command or "\r" in command:
         raise HTTPException(status_code=400, detail="Invalid command payload")
 
@@ -99,13 +101,7 @@ def _send_worldserver_command(command: str, read_seconds: float = 0.8) -> str:
     try:
         sock = client.attach_socket(
             CONTAINER_NAME,
-            params={
-                "stdin": 1,
-                "stdout": 1,
-                "stderr": 1,
-                "stream": 1,
-                "logs": 0,
-            },
+            params={"stdin": 1, "stdout": 1, "stderr": 1, "stream": 1, "logs": 0},
         )
         raw = sock._sock
         raw.sendall((command + "\n").encode("utf-8"))
@@ -137,7 +133,6 @@ def _send_worldserver_command(command: str, read_seconds: float = 0.8) -> str:
 
 
 def _character_db():
-    """Open the helper's least-privilege character DB connection."""
     return pymysql.connect(
         host=os.environ["WOW_DB_HOST"],
         port=int(os.environ.get("WOW_DB_PORT", "3306")),
@@ -151,10 +146,7 @@ def _character_db():
 
 def _audit(event: dict[str, Any]) -> None:
     AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    row = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        **event,
-    }
+    row = {"timestamp": datetime.now(timezone.utc).isoformat(), **event}
     with AUDIT_PATH.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
 
@@ -169,32 +161,14 @@ def _perform_and_audit(*, meta: AuditMeta, action: str, target: str,
         output = ""
         status = "failed"
         error = str(getattr(exc, "detail", exc))
-        _audit({
-            "actor": meta.actor,
-            "request_ip": meta.request_ip,
-            "action": action,
-            "target": target,
-            "prompt": meta.prompt,
-            "command": command,
-            "status": status,
-            "details": details,
-            "output": output,
-            "error": error,
-        })
+        _audit({"actor": meta.actor, "request_ip": meta.request_ip, "action": action,
+                "target": target, "prompt": meta.prompt, "command": command,
+                "status": status, "details": details, "output": output, "error": error})
         raise
 
-    _audit({
-        "actor": meta.actor,
-        "request_ip": meta.request_ip,
-        "action": action,
-        "target": target,
-        "prompt": meta.prompt,
-        "command": command,
-        "status": status,
-        "details": details,
-        "output": output,
-        "error": error,
-    })
+    _audit({"actor": meta.actor, "request_ip": meta.request_ip, "action": action,
+            "target": target, "prompt": meta.prompt, "command": command,
+            "status": status, "details": details, "output": output, "error": error})
     return {"ok": True, "command": command, "output": output}
 
 
@@ -203,214 +177,212 @@ def _parse_int(value: str, *, field: str, minimum: int, maximum: int) -> int:
         parsed = int(value.strip())
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail=f"{field} must be an integer")
-
     if parsed < minimum or parsed > maximum:
-        raise HTTPException(
-            status_code=400,
-            detail=f"{field} must be between {minimum} and {maximum}",
-        )
+        raise HTTPException(status_code=400, detail=f"{field} must be between {minimum} and {maximum}")
     return parsed
 
 
+def _character_by_name(cursor, name: str):
+    cursor.execute(
+        "SELECT guid, name, online FROM characters WHERE UPPER(name)=UPPER(%s) LIMIT 1",
+        (name,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Character '{name}' not found")
+    return row
+
+
+def _friend_row(cursor, owner_guid: int, friend_guid: int):
+    cursor.execute(
+        "SELECT guid, friend, flags, note FROM character_social WHERE guid=%s AND friend=%s LIMIT 1",
+        (owner_guid, friend_guid),
+    )
+    return cursor.fetchone()
+
+
+def _friend_count(cursor, owner_guid: int) -> int:
+    cursor.execute(
+        "SELECT COUNT(*) AS total FROM character_social WHERE guid=%s AND (flags & 1)=1",
+        (owner_guid,),
+    )
+    return int(cursor.fetchone()["total"])
+
+
+def _add_friend_direction(cursor, owner: dict, friend: dict, note: str) -> None:
+    existing = _friend_row(cursor, owner["guid"], friend["guid"])
+    if not existing and _friend_count(cursor, owner["guid"]) >= MAX_FRIENDS:
+        raise HTTPException(status_code=409, detail=f'{owner["name"]} already has {MAX_FRIENDS} friends')
+
+    if existing:
+        cursor.execute(
+            "UPDATE character_social SET flags=(flags | %s), note=%s WHERE guid=%s AND friend=%s",
+            (FRIEND_FLAG, note, owner["guid"], friend["guid"]),
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO character_social (guid, friend, flags, note) VALUES (%s, %s, %s, %s)",
+            (owner["guid"], friend["guid"], FRIEND_FLAG, note),
+        )
+
+
+def _remove_friend_direction(cursor, owner: dict, friend: dict) -> bool:
+    existing = _friend_row(cursor, owner["guid"], friend["guid"])
+    if not existing or not (int(existing["flags"]) & FRIEND_FLAG):
+        return False
+    new_flags = int(existing["flags"]) & ~FRIEND_FLAG
+    if new_flags:
+        cursor.execute(
+            "UPDATE character_social SET flags=%s WHERE guid=%s AND friend=%s",
+            (new_flags, owner["guid"], friend["guid"]),
+        )
+    else:
+        cursor.execute(
+            "DELETE FROM character_social WHERE guid=%s AND friend=%s",
+            (owner["guid"], friend["guid"]),
+        )
+    return True
+
+
 def _set_gold_by_character(*, req: JCExecuteRequest, character: str, gold: int) -> dict[str, Any]:
-    """Set exact gold for an offline character and audit the DB mutation."""
     copper = gold * 10_000
     conn = _character_db()
     try:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT guid, name, online, money
-                FROM characters
-                WHERE UPPER(name) = UPPER(%s)
-                LIMIT 1
-                """,
+                "SELECT guid, name, online, money FROM characters WHERE UPPER(name)=UPPER(%s) LIMIT 1",
                 (character,),
             )
             row = cursor.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Character not found")
             if row["online"]:
-                raise HTTPException(
-                    status_code=409,
-                    detail="Character must be offline before changing gold",
-                )
-
-            cursor.execute(
-                "UPDATE characters SET money = %s WHERE guid = %s",
-                (copper, row["guid"]),
-            )
-
-            details = {
-                "guid": row["guid"],
-                "old_copper": row["money"],
-                "new_copper": copper,
-                "gold": gold,
-                "delivery": "database",
-            }
-            _audit({
-                "actor": req.actor,
-                "request_ip": req.request_ip,
-                "action": "SET_GOLD",
-                "target": row["name"],
-                "prompt": req.prompt,
-                "command": "database:update characters.money",
-                "status": "success",
-                "details": details,
-                "output": "",
-                "error": "",
-            })
-            return {
-                "ok": True,
-                "command": "gold",
-                "character": row["name"],
-                **details,
-            }
+                raise HTTPException(status_code=409, detail="Character must be offline before changing gold")
+            cursor.execute("UPDATE characters SET money=%s WHERE guid=%s", (copper, row["guid"]))
+            details = {"guid": row["guid"], "old_copper": row["money"], "new_copper": copper,
+                       "gold": gold, "delivery": "database"}
+            _audit({"actor": req.actor, "request_ip": req.request_ip, "action": "SET_GOLD",
+                    "target": row["name"], "prompt": req.prompt,
+                    "command": "database:update characters.money", "status": "success",
+                    "details": details, "output": "", "error": ""})
+            return {"ok": True, "command": "gold", "character": row["name"], **details}
     finally:
         conn.close()
 
 
 def _teach_spell(*, req: JCExecuteRequest, canonical: str, character: str, spell_id: int) -> dict[str, Any]:
-    """Teach one spell through the verified AzerothCore named-player command."""
     command = f"player learn {character} {spell_id}"
     action = "TEACH_MOUNT" if canonical == "mount" else "TRAIN_SPELL"
-    result = _perform_and_audit(
-        meta=req,
-        action=action,
-        target=character,
-        command=command,
-        details={"spell_id": spell_id, "source": "jc"},
-    )
-    return {
-        "canonical": canonical,
-        "character": character,
-        "spell_id": spell_id,
-        **result,
-    }
+    result = _perform_and_audit(meta=req, action=action, target=character, command=command,
+                                details={"spell_id": spell_id, "source": "jc"})
+    return {"canonical": canonical, "character": character, "spell_id": spell_id, **result}
 
 
 def _teleport_character(*, req: JCExecuteRequest, character: str, location: str) -> dict[str, Any]:
-    """Teleport a named character using AzerothCore's game_tele-backed command."""
     location = _safe_location(location)
     command = f"teleport name {character} {location}"
-    result = _perform_and_audit(
-        meta=req,
-        action="TELEPORT_PLAYER",
-        target=character,
-        command=command,
-        details={"location": location, "source": "jc"},
-    )
-    return {
-        "canonical": "teleport",
-        "character": character,
-        "location": location,
-        **result,
-    }
+    result = _perform_and_audit(meta=req, action="TELEPORT_PLAYER", target=character,
+                                command=command, details={"location": location, "source": "jc"})
+    return {"canonical": "teleport", "character": character, "location": location, **result}
+
+
+@router.post("/admin-tools/friends/add")
+def add_friend(req: FriendRequest):
+    character = _safe_name(req.character)
+    friend_name = _safe_name(req.friend)
+    note = req.note.strip()[:48]
+    if character.lower() == friend_name.lower():
+        raise HTTPException(status_code=400, detail="A character cannot add itself as a friend")
+
+    conn = _character_db()
+    try:
+        with conn.cursor() as cursor:
+            owner = _character_by_name(cursor, character)
+            friend = _character_by_name(cursor, friend_name)
+            _add_friend_direction(cursor, owner, friend, note)
+            if req.mutual:
+                _add_friend_direction(cursor, friend, owner, note)
+            details = {"friend": friend["name"], "friend_guid": friend["guid"],
+                       "mutual": req.mutual, "note": note, "source": "character_social"}
+            _audit({"actor": req.actor, "request_ip": req.request_ip, "action": "ADD_FRIEND",
+                    "target": owner["name"], "prompt": req.prompt,
+                    "command": "database:update character_social", "status": "success",
+                    "details": details, "output": "", "error": ""})
+            return {"ok": True, "character": owner["name"], **details}
+    finally:
+        conn.close()
+
+
+@router.post("/admin-tools/friends/remove")
+def remove_friend(req: FriendRequest):
+    character = _safe_name(req.character)
+    friend_name = _safe_name(req.friend)
+    conn = _character_db()
+    try:
+        with conn.cursor() as cursor:
+            owner = _character_by_name(cursor, character)
+            friend = _character_by_name(cursor, friend_name)
+            removed = _remove_friend_direction(cursor, owner, friend)
+            reverse_removed = _remove_friend_direction(cursor, friend, owner) if req.mutual else False
+            details = {"friend": friend["name"], "friend_guid": friend["guid"],
+                       "mutual": req.mutual, "removed": removed,
+                       "reverse_removed": reverse_removed, "source": "character_social"}
+            _audit({"actor": req.actor, "request_ip": req.request_ip, "action": "REMOVE_FRIEND",
+                    "target": owner["name"], "prompt": req.prompt,
+                    "command": "database:update character_social", "status": "success",
+                    "details": details, "output": "", "error": ""})
+            return {"ok": True, "character": owner["name"], **details}
+    finally:
+        conn.close()
 
 
 @router.post("/admin-tools/character/items")
 def send_items(req: SendItemsRequest):
     character = _safe_name(req.character)
-    command = (
-        f'send items {character} "Admin delivery" '
-        f'"Delivered by JesterWoW Admin Console" {req.item_id}:{req.count}'
-    )
-    return _perform_and_audit(
-        meta=req,
-        action="SEND_ITEM",
-        target=character,
-        command=command,
-        details={
-            "item_id": req.item_id,
-            "item_name": req.item_name,
-            "count": req.count,
-            "delivery": "mail",
-        },
-    )
+    command = f'send items {character} "Admin delivery" "Delivered by JesterWoW Admin Console" {req.item_id}:{req.count}'
+    return _perform_and_audit(meta=req, action="SEND_ITEM", target=character, command=command,
+                              details={"item_id": req.item_id, "item_name": req.item_name,
+                                       "count": req.count, "delivery": "mail"})
 
 
 @router.post("/admin-tools/character/level")
 def set_level(req: LevelRequest):
     character = _safe_name(req.character)
     command = f"character level {character} {req.level}"
-    return _perform_and_audit(
-        meta=req,
-        action="SET_LEVEL",
-        target=character,
-        command=command,
-        details={"level": req.level},
-    )
+    return _perform_and_audit(meta=req, action="SET_LEVEL", target=character, command=command,
+                              details={"level": req.level})
 
 
 @router.post("/jc/execute")
 def execute_jc(req: JCExecuteRequest):
-    """Execute shared JMod commands through one validated backend.
-
-    Supported now: help/?, info, item/add, level/lvl, gold/money,
-    mount/learnmount, train/training/spell/learn, and teleport/travel/tele.
-    """
     canonical, spec = resolve_command(req.command)
     if canonical is None or spec is None:
         raise HTTPException(status_code=404, detail="Unknown JMod command")
-
     if canonical == "help":
         return {"ok": True, "command": "help", "lines": help_lines()}
-
     if canonical == "info":
-        result = _perform_and_audit(
-            meta=req,
-            action="SERVER_INFO",
-            target="server",
-            command="server info",
-            details={"source": "jc"},
-        )
+        result = _perform_and_audit(meta=req, action="SERVER_INFO", target="server",
+                                    command="server info", details={"source": "jc"})
         return {"canonical": canonical, **result}
-
     if canonical not in {"item", "level", "gold", "mount", "train", "teleport"}:
-        raise HTTPException(
-            status_code=501,
-            detail=f"Command '{canonical}' is registered but not executable yet",
-        )
+        raise HTTPException(status_code=501, detail=f"Command '{canonical}' is registered but not executable yet")
 
     character = _safe_name(req.character)
-
     if canonical == "level":
         level = _parse_int(req.value, field="level", minimum=1, maximum=80)
         command = f"character level {character} {level}"
-        result = _perform_and_audit(
-            meta=req,
-            action="SET_LEVEL",
-            target=character,
-            command=command,
-            details={"level": level, "source": "jc"},
-        )
+        result = _perform_and_audit(meta=req, action="SET_LEVEL", target=character, command=command,
+                                    details={"level": level, "source": "jc"})
         return {"canonical": canonical, "character": character, "level": level, **result}
-
     if canonical == "gold":
         gold = _parse_int(req.value, field="gold", minimum=0, maximum=MAX_GOLD)
         result = _set_gold_by_character(req=req, character=character, gold=gold)
         return {"canonical": canonical, **result}
-
     if canonical == "teleport":
-        return _teleport_character(
-            req=req,
-            character=character,
-            location=req.value,
-        )
-
+        return _teleport_character(req=req, character=character, location=req.value)
     if canonical in {"mount", "train"}:
-        spell_id = _parse_int(
-            req.value,
-            field="spell id",
-            minimum=1,
-            maximum=MAX_SPELL_ID,
-        )
-        return _teach_spell(
-            req=req,
-            canonical=canonical,
-            character=character,
-            spell_id=spell_id,
-        )
+        spell_id = _parse_int(req.value, field="spell id", minimum=1, maximum=MAX_SPELL_ID)
+        return _teach_spell(req=req, canonical=canonical, character=character, spell_id=spell_id)
 
     alias = resolve_item_alias(req.value)
     if alias:
@@ -418,40 +390,15 @@ def execute_jc(req: JCExecuteRequest):
         count = req.count if req.count != 1 else int(alias.get("count", 1))
         item_name = str(alias.get("label", req.value))
     else:
-        item_id = _parse_int(
-            req.value,
-            field="item id",
-            minimum=1,
-            maximum=4_294_967_295,
-        )
+        item_id = _parse_int(req.value, field="item id", minimum=1, maximum=4_294_967_295)
         count = req.count
         item_name = ""
-
-    command = (
-        f'send items {character} "Admin delivery" '
-        f'"Delivered by JMod /jc" {item_id}:{count}'
-    )
-    result = _perform_and_audit(
-        meta=req,
-        action="SEND_ITEM",
-        target=character,
-        command=command,
-        details={
-            "item_id": item_id,
-            "item_name": item_name,
-            "count": count,
-            "delivery": "mail",
-            "source": "jc",
-        },
-    )
-    return {
-        "canonical": canonical,
-        "character": character,
-        "item_id": item_id,
-        "item_name": item_name,
-        "count": count,
-        **result,
-    }
+    command = f'send items {character} "Admin delivery" "Delivered by JMod /jc" {item_id}:{count}'
+    result = _perform_and_audit(meta=req, action="SEND_ITEM", target=character, command=command,
+                                details={"item_id": item_id, "item_name": item_name,
+                                         "count": count, "delivery": "mail", "source": "jc"})
+    return {"canonical": canonical, "character": character, "item_id": item_id,
+            "item_name": item_name, "count": count, **result}
 
 
 @router.get("/admin-tools/audit")
@@ -459,7 +406,6 @@ def get_audit(limit: int = 250):
     limit = max(1, min(int(limit), 1000))
     if not AUDIT_PATH.exists():
         return {"events": []}
-
     lines = AUDIT_PATH.read_text(encoding="utf-8", errors="replace").splitlines()[-limit:]
     events = []
     for line in reversed(lines):
