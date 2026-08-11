@@ -8,7 +8,7 @@ import socket
 import re
 from urllib.parse import quote_plus
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -74,6 +74,22 @@ ITEM_ALIASES = {
     "essence gatherer": 19435,
 }
 
+RACE_NAMES = {
+    1: "Human", 2: "Orc", 3: "Dwarf", 4: "Night Elf", 5: "Undead",
+    6: "Tauren", 7: "Gnome", 8: "Troll", 10: "Blood Elf", 11: "Draenei",
+}
+CLASS_NAMES = {
+    1: "Warrior", 2: "Paladin", 3: "Hunter", 4: "Rogue", 5: "Priest",
+    6: "Death Knight", 7: "Shaman", 8: "Mage", 9: "Warlock", 11: "Druid",
+}
+GENDER_NAMES = {0: "Male", 1: "Female", 2: "Unknown"}
+EQUIPMENT_SLOT_NAMES = {
+    0: "Head", 1: "Neck", 2: "Shoulders", 3: "Shirt", 4: "Chest",
+    5: "Waist", 6: "Legs", 7: "Feet", 8: "Wrists", 9: "Hands",
+    10: "Finger 1", 11: "Finger 2", 12: "Trinket 1", 13: "Trinket 2",
+    14: "Back", 15: "Main Hand", 16: "Off Hand", 17: "Ranged", 18: "Tabard",
+}
+
 
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
@@ -118,6 +134,99 @@ def _find_character(name: str):
             return cur.fetchone()
     finally:
         conn.close()
+
+
+def _character_render_data(guid: int):
+    """Build a renderer-ready snapshot from AzerothCore character and gear tables."""
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    c.guid, c.name, c.level, c.race, c.class, c.gender,
+                    c.skin, c.face, c.hairStyle, c.hairColor, c.facialStyle,
+                    c.money, c.online, c.map, c.zone,
+                    c.position_x, c.position_y, c.position_z, c.orientation,
+                    c.totaltime, a.username
+                FROM acore_characters.characters c
+                LEFT JOIN acore_auth.account a ON a.id = c.account
+                WHERE c.guid=%s
+                LIMIT 1
+            """, (guid,))
+            character = cur.fetchone()
+            if not character:
+                return None
+
+            cur.execute("""
+                SELECT
+                    ci.slot,
+                    ii.itemEntry AS item_id,
+                    it.name,
+                    it.displayid,
+                    it.Quality AS quality,
+                    it.InventoryType AS inventory_type,
+                    it.ItemLevel AS item_level
+                FROM acore_characters.character_inventory ci
+                JOIN acore_characters.item_instance ii ON ii.guid = ci.item
+                JOIN acore_world.item_template it ON it.entry = ii.itemEntry
+                WHERE ci.guid=%s
+                  AND ci.bag=0
+                  AND ci.slot BETWEEN 0 AND 18
+                ORDER BY ci.slot
+            """, (guid,))
+            equipment_rows = list(cur.fetchall())
+    finally:
+        conn.close()
+
+    equipment = []
+    for row in equipment_rows:
+        equipment.append({
+            "slot": int(row["slot"]),
+            "slot_name": EQUIPMENT_SLOT_NAMES.get(int(row["slot"]), f'Slot {row["slot"]}'),
+            "item_id": int(row["item_id"]),
+            "name": str(row["name"]),
+            "display_id": int(row["displayid"]),
+            "quality": int(row["quality"]),
+            "inventory_type": int(row["inventory_type"]),
+            "item_level": int(row["item_level"]),
+        })
+
+    return {
+        "guid": int(character["guid"]),
+        "name": str(character["name"]),
+        "account": character.get("username") or "Unknown",
+        "level": int(character["level"]),
+        "race": int(character["race"]),
+        "race_name": RACE_NAMES.get(int(character["race"]), f'Race {character["race"]}'),
+        "class": int(character["class"]),
+        "class_name": CLASS_NAMES.get(int(character["class"]), f'Class {character["class"]}'),
+        "gender": int(character["gender"]),
+        "gender_name": GENDER_NAMES.get(int(character["gender"]), "Unknown"),
+        "appearance": {
+            "skin": int(character["skin"]),
+            "face": int(character["face"]),
+            "hair_style": int(character["hairStyle"]),
+            "hair_color": int(character["hairColor"]),
+            "facial_style": int(character["facialStyle"]),
+        },
+        "money": int(character["money"]),
+        "online": bool(character["online"]),
+        "played_seconds": int(character["totaltime"]),
+        "location": {
+            "map": int(character["map"]),
+            "zone": int(character["zone"]),
+            "x": float(character["position_x"]),
+            "y": float(character["position_y"]),
+            "z": float(character["position_z"]),
+            "orientation": float(character["orientation"]),
+        },
+        "equipment": equipment,
+        "renderer": {
+            "asset_mode": "local-wotlk-335a",
+            "status": "data-ready",
+            "note": "Character appearance and equipped item display IDs are ready for the local 3D asset pipeline.",
+        },
+    }
 
 
 def _item_by_id(item_id: int):
@@ -263,6 +372,22 @@ def _parse_god_prompt(prompt: str):
             qty = int(qm.group(1)); rest = qm.group(2).strip()
         return {"kind": "item", "character": character, "count": qty, "item_text": rest}
     return {"kind": "unknown"}
+
+
+@router.get("/characters/{guid}/render-data")
+def character_render_data(guid: int):
+    data = _character_render_data(guid)
+    if not data:
+        raise HTTPException(status_code=404, detail="Character not found")
+    return data
+
+
+@router.get("/characters/{guid}/studio", response_class=HTMLResponse)
+def character_studio(guid: int):
+    data = _character_render_data(guid)
+    if not data:
+        raise HTTPException(status_code=404, detail="Character not found")
+    return _render("character_studio.html", character=data)
 
 
 @router.get("/gear", response_class=HTMLResponse)
