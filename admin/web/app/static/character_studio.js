@@ -67,7 +67,6 @@
     const viewerSlotForItem = (item) => {
         const equipmentSlot = Number(item.slot);
         const inventoryType = Number(item.inventory_type || 0);
-        // wow-model-viewer has a dedicated slot for robe-style chest pieces.
         if (equipmentSlot === 4 && inventoryType === 20) return 20;
         return baseViewerSlot(equipmentSlot);
     };
@@ -121,21 +120,40 @@
         }
     }
 
-    async function updatePreviewItem(item) {
-        if (!activeModel) throw new Error('The 3D character is not ready yet.');
+    async function resolveViewerItem(item) {
         const viewerSlot = viewerSlotForItem(item);
         const displayId = Number(item.display_id || 0);
+        const itemId = Number(item.id || item.item_id || 0);
         if (!viewerSlot || !displayId) throw new Error('That item does not have a renderable slot/display ID.');
 
-        // The viewer exposes a live equipment update API. Use it instead of rebuilding
-        // the whole model, which can leave old geosets/materials cached in the viewer.
-        if (typeof activeModel.updateItemViewer === 'function') {
-            await Promise.resolve(activeModel.updateItemViewer(viewerSlot, displayId, 0));
-            return;
+        if (viewerModule && typeof viewerModule.getDisplaySlot === 'function' && itemId) {
+            try {
+                const resolved = await viewerModule.getDisplaySlot(itemId, Number(viewerSlot), displayId, 'live');
+                if (resolved && resolved.displaySlot && resolved.displayId) {
+                    return {
+                        displaySlot: Number(resolved.displaySlot),
+                        displayId: Number(resolved.displayId),
+                    };
+                }
+            } catch (error) {
+                console.warn('WotLK display conversion failed; using catalog display ID directly.', error);
+            }
         }
 
-        // Older viewer builds do not expose updateItemViewer, so retain the safe fallback.
+        return {displaySlot: Number(viewerSlot), displayId};
+    }
+
+    async function updatePreviewItem(item) {
+        if (!activeModel) throw new Error('The 3D character is not ready yet.');
+        const resolved = await resolveViewerItem(item);
+
+        if (typeof activeModel.updateItemViewer === 'function') {
+            activeModel.updateItemViewer(resolved.displaySlot, resolved.displayId, 0);
+            return resolved;
+        }
+
         await renderCharacter();
+        return resolved;
     }
 
     async function startRenderer() {
@@ -274,10 +292,10 @@
             previewOverrides.set(Number(slot.value), previewItem);
             updatePlanned();
             try {
-                setRenderStatus(`Applying ${selectedGear.name}...`);
-                await updatePreviewItem(previewItem);
+                setRenderStatus(`Resolving ${selectedGear.name} for the live renderer...`);
+                const resolved = await updatePreviewItem(previewItem);
                 const overrideCount = previewOverrides.size;
-                setRenderStatus(`Live preview loaded with ${overrideCount} gear override${overrideCount === 1 ? '' : 's'}.`, 'ok');
+                setRenderStatus(`Live preview loaded with ${overrideCount} gear override${overrideCount === 1 ? '' : 's'} · viewer display ${resolved.displayId}.`, 'ok');
                 setActionStatus(`Previewing ${selectedGear.name} in ${slotNames[Number(slot.value)]}.`, 'ok');
             } catch (error) {
                 setRenderStatus(`Preview failed: ${error.message}`, 'error');
