@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ character.name }} Character Studio - JesterWoW Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .studio-grid{display:grid;grid-template-columns:minmax(360px,1.15fr) minmax(320px,.85fr);gap:20px}
+        .stage{min-height:610px;position:relative;overflow:hidden;padding:22px;background:radial-gradient(circle at 50% 32%,rgba(0,225,255,.10),transparent 34%),linear-gradient(180deg,rgba(9,18,38,.98),rgba(3,8,19,.98));border-radius:14px}
+        .stage:before{content:"";position:absolute;inset:auto 12% 7% 12%;height:34px;border-radius:50%;background:rgba(0,0,0,.55);filter:blur(10px)}
+        .avatar-wrap{height:430px;display:grid;place-items:center;position:relative}
+        .avatar{position:relative;width:190px;height:390px;filter:drop-shadow(0 20px 24px rgba(0,0,0,.55))}
+        .avatar-head{position:absolute;top:22px;left:62px;width:66px;height:78px;border-radius:46% 46% 42% 42%;background:linear-gradient(180deg,#7d91ad,#53677e);border:2px solid rgba(255,255,255,.12)}
+        .avatar-hair{position:absolute;top:9px;left:55px;width:80px;height:46px;border-radius:50% 50% 34% 34%;background:#202a3a;transform:rotate(-2deg)}
+        .avatar-body{position:absolute;top:96px;left:40px;width:110px;height:150px;border-radius:34px 34px 25px 25px;background:linear-gradient(180deg,#354a68,#18243a);border:2px solid rgba(0,225,255,.18)}
+        .avatar-arm{position:absolute;top:108px;width:38px;height:155px;border-radius:20px;background:linear-gradient(180deg,#354a68,#18243a)}
+        .avatar-arm.left{left:8px;transform:rotate(6deg)}.avatar-arm.right{right:8px;transform:rotate(-6deg)}
+        .avatar-leg{position:absolute;top:235px;width:44px;height:145px;border-radius:20px;background:linear-gradient(180deg,#263853,#111a2d)}
+        .avatar-leg.left{left:46px}.avatar-leg.right{right:46px}
+        .stage-label{text-align:center;position:relative}.stage-label h2{margin:0;color:#fff;font-size:24px}.stage-label p{margin:6px 0;color:#8296b2}.stage-badge{display:inline-block;margin-top:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(0,225,255,.22);color:#8eefff;background:rgba(0,225,255,.06);font-size:12px}
+        .panel-pad{padding:20px}.stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:9px;background:rgba(255,255,255,.02)}.stat span{display:block;color:#7186a3;font-size:11px;text-transform:uppercase;letter-spacing:.08em}.stat strong{display:block;margin-top:5px;color:#e7f3ff}
+        .appearance{margin-top:16px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.appearance div{padding:10px 8px;border-radius:8px;background:#080e20;border:1px solid rgba(255,255,255,.06);text-align:center}.appearance small{display:block;color:#7186a3}.appearance strong{display:block;margin-top:4px}
+        .gear-list{display:grid;gap:8px;margin-top:12px}.gear-row{display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.02)}.gear-slot{color:#7f96b4;font-size:12px}.gear-name{color:#dfeeff}.gear-id{color:#7186a3;font-size:11px;text-align:right}.empty{padding:18px;color:#7186a3;text-align:center}
+        .renderer-note{margin-top:16px;padding:12px 14px;border:1px solid rgba(124,92,255,.24);border-radius:9px;background:rgba(124,92,255,.055);color:#aebeda;font-size:12px;line-height:1.5}
+        .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px}.toolbar a{display:inline-flex;align-items:center;text-decoration:none}
+        code{color:#9be7ff}
+        @media(max-width:980px){.studio-grid{grid-template-columns:1fr}.stage{min-height:540px}.appearance{grid-template-columns:repeat(3,1fr)}}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand"><div class="logo">JT</div><div class="brand-text"><strong>JesterWoW</strong><small>Admin Console</small></div></div>
+        <nav>
+            <a href="/">Dashboard</a>
+            <a href="/accounts">Accounts</a>
+            <a class="active" href="/characters">Characters</a>
+            <a href="/server">Server</a>
+            <a href="/gear">Gear</a>
+            <a href="/jmod-tools">JMod Tools</a>
+            <a href="/tools/god-mode">God Mode</a>
+            <a href="/audit">Audit Log</a>
+        </nav>
+    </aside>
+    <main>
+        <header>
+            <div>
+                <a class="back-link" href="/characters">← Characters</a>
+                <h1>{{ character.name }} Character Studio</h1>
+                <p>{{ character.race_name }} {{ character.class_name }} · Level {{ character.level }} · {{ character.gender_name }}</p>
+            </div>
+            <div class="status"><span class="dot {% if character.online %}online{% else %}offline{% endif %}"></span>{% if character.online %}Online{% else %}Offline{% endif %}</div>
+        </header>
+
+        <div class="toolbar">
+            <a class="secondary-button" href="/characters/{{ character.guid }}">Character Admin</a>
+            <a class="secondary-button" href="/jmod-tools">JMod Tools</a>
+            <a class="secondary-button" href="/characters/{{ character.guid }}/render-data">Render JSON</a>
+        </div>
+
+        <div class="studio-grid">
+            <section class="panel stage">
+                <div class="avatar-wrap" id="character-render-stage" aria-label="Character render stage">
+                    <div class="avatar" aria-hidden="true">
+                        <div class="avatar-hair"></div><div class="avatar-head"></div><div class="avatar-body"></div>
+                        <div class="avatar-arm left"></div><div class="avatar-arm right"></div>
+                        <div class="avatar-leg left"></div><div class="avatar-leg right"></div>
+                    </div>
+                </div>
+                <div class="stage-label">
+                    <h2>{{ character.name }}</h2>
+                    <p>{{ character.race_name }} {{ character.class_name }}</p>
+                    <span class="stage-badge">Local 3.3.5a render data ready</span>
+                </div>
+                <div class="renderer-note">
+                    <strong>Renderer foundation:</strong> JMod now has the exact race, gender, appearance values and equipped item display IDs needed by a local WotLK renderer. This mannequin is deliberately temporary. The next stage replaces it with client-extracted 3D model and texture assets instead of depending on Blizzard or Wowhead at runtime.
+                </div>
+            </section>
+
+            <div>
+                <section class="panel panel-pad">
+                    <div class="panel-title"><h2>Character Snapshot</h2></div>
+                    <div class="stat-grid">
+                        <div class="stat"><span>Account</span><strong>{{ character.account }}</strong></div>
+                        <div class="stat"><span>GUID</span><strong>{{ character.guid }}</strong></div>
+                        <div class="stat"><span>Level</span><strong>{{ character.level }}</strong></div>
+                        <div class="stat"><span>Gold</span><strong>{{ character.money // 10000 }}g {{ (character.money // 100) % 100 }}s {{ character.money % 100 }}c</strong></div>
+                        <div class="stat"><span>Race</span><strong>{{ character.race_name }} [{{ character.race }}]</strong></div>
+                        <div class="stat"><span>Class</span><strong>{{ character.class_name }} [{{ character.class }}]</strong></div>
+                        <div class="stat"><span>Map / Zone</span><strong>{{ character.location.map }} / {{ character.location.zone }}</strong></div>
+                        <div class="stat"><span>Played</span><strong>{{ character.played_seconds // 3600 }}h</strong></div>
+                    </div>
+                    <div class="appearance">
+                        <div><small>Skin</small><strong>{{ character.appearance.skin }}</strong></div>
+                        <div><small>Face</small><strong>{{ character.appearance.face }}</strong></div>
+                        <div><small>Hair</small><strong>{{ character.appearance.hair_style }}</strong></div>
+                        <div><small>Hair Color</small><strong>{{ character.appearance.hair_color }}</strong></div>
+                        <div><small>Facial</small><strong>{{ character.appearance.facial_style }}</strong></div>
+                    </div>
+                </section>
+
+                <section class="panel panel-pad" style="margin-top:20px">
+                    <div class="panel-title"><h2>Equipped Gear</h2><small>{{ character.equipment|length }} equipped records</small></div>
+                    {% if character.equipment %}
+                    <div class="gear-list">
+                        {% for item in character.equipment %}
+                        <div class="gear-row">
+                            <div class="gear-slot">{{ item.slot_name }}</div>
+                            <div class="gear-name">{{ item.name }}<br><small>Item level {{ item.item_level }} · Quality {{ item.quality }}</small></div>
+                            <div class="gear-id">Item {{ item.item_id }}<br>Display {{ item.display_id }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty">No equipped items found.</div>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>
