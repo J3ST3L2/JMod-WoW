@@ -1,0 +1,27 @@
+services:
+  web:
+    build:
+      context: ./web
+
+    container_name: wow-admin
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "8090:8080"
+
+    volumes:
+      - /opt/wow-admin/run:/run/wow-admin
+
+    group_add:
+      - "987"
+
+    networks:
+      - ac-network
+
+networks:
+  ac-network:
+    external: true
+    name: azerothcore-wotlk_ac-network

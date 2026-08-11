@@ -1,0 +1,14 @@
+services:
+  wow-model-assets:
+    image: miorey/bypass-cors-policies:v1
+    container_name: wow-model-assets
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: https://wow.zamimg.com
+    ports:
+      - "2999:3000"
+    volumes:
+      - wow-model-assets-cache:/usr/src/app/storage
+
+volumes:
+  wow-model-assets-cache:

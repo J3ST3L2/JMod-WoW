@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Runtime data
+run/
+logs/
+backups/
+data/*.db
+data/*.sqlite*
+data/cache/
+data/export/
+
+# Database dumps
+*.sql.gz
+*.dump
+*.bak
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# WoW client runtime
+WTF/
+Cache/
+Errors/
+Logs/
+
+# Python environments / caches
+venv/
+.venv/
+**/venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Runtime state
+run/
+**/run/
+*.sock
+*.pid
+
+# Backups and dumps
+backups/
+**/backups/
+*.bak
+*.bak.*
+*.sql.gz
+*.dump
+
+# Local databases / generated data
+*.sqlite
+*.sqlite3

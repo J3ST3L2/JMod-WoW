@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audit Log - JesterWoW Admin</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:0}.wrap{max-width:1450px;margin:40px auto;padding:0 20px}a{color:#58a6ff}nav{display:flex;gap:18px;margin-bottom:28px}.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px;margin-bottom:18px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #30363d;padding:9px;white-space:pre-wrap}.success{color:#3fb950}.failed{color:#f85149}code{font-size:12px}.muted{color:#8b949e}
+</style></head><body><div class="wrap">
+<nav><a href="/">Dashboard</a><a href="/characters">Characters</a><a href="/gear">Gear</a><a href="/tools/god-mode">God Mode</a><a href="/audit">Audit Log</a></nav>
+<h1>Audit Log</h1><p class="muted">Append-only host log for admin mutations made through the new tools.</p>
+{% if error %}<div class="card failed">{{ error }}</div>{% endif %}
+<div class="card"><table><thead><tr><th>Time (UTC)</th><th>Actor / IP</th><th>Action</th><th>Target</th><th>Prompt</th><th>Command</th><th>Status</th><th>Result</th></tr></thead><tbody>
+{% for e in events %}<tr><td>{{ e.timestamp }}</td><td>{{ e.actor }}<br>{{ e.request_ip }}</td><td>{{ e.action }}</td><td>{{ e.target }}</td><td>{{ e.prompt }}</td><td><code>{{ e.command }}</code></td><td class="{{ e.status }}">{{ e.status }}</td><td>{{ e.output or e.error }}</td></tr>{% else %}<tr><td colspan="8">No audited actions yet.</td></tr>{% endfor %}
+</tbody></table></div></div></body></html>

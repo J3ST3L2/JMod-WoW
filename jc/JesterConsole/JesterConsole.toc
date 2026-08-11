@@ -1,0 +1,9 @@
+## Interface: 30300
+## Title: JesterConsole
+## Notes: Quake-style GM helper console for AzerothCore 3.3.5a
+## Author: OpenAI + Tyler
+## Version: 1.0.1
+## SavedVariables: JesterConsoleDB
+
+Bindings.xml
+JesterConsole.lua

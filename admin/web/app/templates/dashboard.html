@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <title>Dashboard - JesterWoW Admin</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+</head>
+
+<body>
+
+<div class="shell">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="logo">
+                JT
+            </div>
+
+            <div class="brand-text">
+                <strong>JesterWoW</strong>
+                <small>Admin Console</small>
+            </div>
+
+        </div>
+
+        <nav>
+            <a class="active" href="/">Dashboard</a>
+            <a href="/accounts">Accounts</a>
+            <a href="/characters">Characters</a>
+            <a href="/server">Server</a>
+            <a href="/jmod-tools">JMod Tools</a>
+            <a href="/gear">Gear</a>
+            <a href="/tools/god-mode">God Mode</a>
+            <a href="/audit">Audit Log</a>
+        </nav>
+
+    </aside>
+
+
+    <main>
+
+        <header>
+
+            <div>
+                <h1>Dashboard</h1>
+                <p>AzerothCore administration console</p>
+            </div>
+
+            <div class="status">
+
+                {% if helper_online %}
+
+                    <span class="dot online"></span>
+                    Worldserver Online
+
+                {% else %}
+
+                    <span class="dot offline"></span>
+                    Helper Offline
+
+                {% endif %}
+
+            </div>
+
+        </header>
+
+
+        <section class="cards">
+
+            <div class="card">
+                <span>Accounts</span>
+                <strong>{{ account_count }}</strong>
+            </div>
+
+            <div class="card">
+                <span>Characters</span>
+                <strong>{{ character_count }}</strong>
+            </div>
+
+            <div class="card">
+                <span>Players Online</span>
+                <strong>{{ online_count }}</strong>
+            </div>
+
+        </section>
+
+
+        <section class="panel">
+
+            <div class="panel-title">
+                <h2>Characters</h2>
+            </div>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Account</th>
+                        <th>Level</th>
+                        <th>Gold</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for char in characters %}
+
+                <tr>
+
+                    <td>
+                        {{ char.name }}
+                    </td>
+
+                    <td>
+                        {{ char.username or "Unknown" }}
+                    </td>
+
+                    <td>
+                        {{ char.level }}
+                    </td>
+
+                    <td>
+                        {{ char.money // 10000 }}g
+                        {{ (char.money // 100) % 100 }}s
+                        {{ char.money % 100 }}c
+                    </td>
+
+                    <td>
+
+                        {% if char.online %}
+
+                            <span class="badge online-badge">
+                                Online
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge offline-badge">
+                                Offline
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+
+        <section class="panel">
+
+            <div class="panel-title">
+                <h2>Worldserver</h2>
+            </div>
+
+            <pre>{{ server_info }}</pre>
+
+        </section>
+
+    </main>
+
+</div>
+
+</body>
+</html>

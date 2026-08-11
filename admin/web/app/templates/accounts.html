@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Accounts - JesterWoW Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .account-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .create-panel{margin-bottom:18px;padding:18px}
+        .create-panel[hidden]{display:none}
+        .create-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .create-grid .full{grid-column:1/-1}
+        .create-panel label{display:grid;gap:6px;color:#8da4c2;font-size:12px}
+        .create-panel input{width:100%;padding:11px 13px;border-radius:8px;border:1px solid rgba(0,225,255,.15);background:#080e20;color:#fff}
+        .create-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+        .create-actions button{min-width:150px}
+        .account-help{margin-top:10px;color:#7186a3;font-size:12px;line-height:1.5}
+        .account-help strong{color:#d7e9ff}
+        @media(max-width:760px){.create-grid{grid-template-columns:1fr}.create-grid .full{grid-column:auto}}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand"><div class="logo">JT</div><div class="brand-text"><strong>JesterWoW</strong><small>Admin Console</small></div></div>
+        <nav>
+            <a href="/">Dashboard</a>
+            <a class="active" href="/accounts">Accounts</a>
+            <a href="/characters">Characters</a>
+            <a href="/server">Server</a>
+            <a href="/jmod-tools">JMod Tools</a>
+            <a href="/tools/god-mode">God Mode</a>
+            <a href="/audit">Audit Log</a>
+        </nav>
+    </aside>
+
+    <main>
+        <header>
+            <div><h1>Accounts</h1><p>Player accounts and account status</p></div>
+            <div class="account-toolbar"><button id="toggle-account-create" class="primary-button" type="button">Create Account</button></div>
+        </header>
+
+        <section id="create-account-panel" class="panel create-panel" hidden>
+            <div class="panel-title"><div><h2>Create Player Account</h2><p>Create the login through AzerothCore's worldserver account command.</p></div></div>
+            <form method="post" action="/accounts/create" autocomplete="off">
+                <div class="create-grid">
+                    <label>Username
+                        <input name="username" maxlength="17" pattern="[A-Za-z0-9_]+" placeholder="e.g. ASHLEY" required autocomplete="off">
+                    </label>
+                    <label>Password
+                        <input name="password" type="password" maxlength="16" placeholder="Up to 16 characters" required autocomplete="new-password">
+                    </label>
+                    <label class="full">Email <span style="color:#7186a3">(optional)</span>
+                        <input name="email" type="email" maxlength="255" placeholder="player@example.com" autocomplete="off">
+                    </label>
+                </div>
+                <div class="account-help"><strong>Account rules:</strong> username is 1-17 letters, numbers, or underscore. Password is limited to 16 characters and cannot contain spaces. The account is created by AzerothCore itself, not by writing auth rows directly.</div>
+                <div class="create-actions"><button class="primary-button" type="submit">Create Account</button><button id="cancel-account-create" class="secondary-button" type="button">Cancel</button></div>
+            </form>
+        </section>
+
+        <section class="panel">
+            <table>
+                <thead><tr><th>Username</th><th>Characters</th><th>Last Login</th><th>Last IP</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for account in accounts %}
+                <tr>
+                    <td><strong>{{ account.username }}</strong></td>
+                    <td>{{ account.character_count }}</td>
+                    <td>{{ account.last_login or "Never" }}</td>
+                    <td>{{ account.last_ip or "-" }}</td>
+                    <td>{% if account.locked %}<span class="badge offline-badge">Locked</span>{% else %}<span class="badge online-badge">Active</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+</div>
+<script>
+(() => {
+    const panel = document.getElementById('create-account-panel');
+    const toggle = document.getElementById('toggle-account-create');
+    const cancel = document.getElementById('cancel-account-create');
+    const open = () => { panel.hidden = false; toggle.textContent = 'Close'; panel.querySelector('input[name="username"]')?.focus(); };
+    const close = () => { panel.hidden = true; toggle.textContent = 'Create Account'; };
+    toggle?.addEventListener('click', () => panel.hidden ? open() : close());
+    cancel?.addEventListener('click', close);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ character.name }} Character Studio - JesterWoW Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .studio-shell{display:grid;grid-template-columns:minmax(420px,.95fr) minmax(520px,1.05fr);gap:18px;align-items:start}
+        .stage{position:sticky;top:18px;padding:16px;background:radial-gradient(circle at 50% 28%,rgba(0,225,255,.10),transparent 38%),linear-gradient(180deg,rgba(9,18,38,.98),rgba(3,8,19,.98));border-radius:14px}
+        .viewer-shell{height:560px;position:relative;border:1px solid rgba(0,225,255,.13);border-radius:12px;background:radial-gradient(circle at 50% 42%,rgba(124,92,255,.08),transparent 50%),rgba(0,0,0,.12);overflow:hidden}
+        #wow-model-viewer{width:100%;height:100%;min-height:560px}
+        #wow-model-viewer canvas{width:100%!important;height:100%!important;display:block}
+        #wow-model-viewer.render-failed:after{content:"Renderer offline";position:absolute;inset:0;display:grid;place-items:center;color:#7186a3;font-size:18px}
+        .render-status,.studio-status{margin-top:10px;padding:9px 11px;border-radius:8px;border:1px solid rgba(0,225,255,.14);background:rgba(0,225,255,.035);color:#9cb2cf;font-size:12px;line-height:1.35}
+        .render-status[data-kind="ok"],.studio-status[data-kind="ok"]{color:#4dffc3;border-color:rgba(77,255,195,.22);background:rgba(77,255,195,.05)}
+        .render-status[data-kind="error"],.studio-status[data-kind="error"]{color:#ff9dbb;border-color:rgba(255,157,187,.22);background:rgba(255,157,187,.05)}
+        .stage-meta{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-top:12px}.stage-meta h2{margin:0;color:#fff;font-size:22px}.stage-meta p{margin:3px 0 0;color:#8296b2;font-size:13px}.stage-badge{white-space:nowrap;padding:6px 9px;border-radius:999px;border:1px solid rgba(0,225,255,.22);color:#8eefff;background:rgba(0,225,255,.06);font-size:11px}
+        .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}.toolbar a{display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px}
+        .workspace{display:grid;gap:14px}.panel-pad{padding:16px}.panel-title{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.panel-title h2,.panel-title h3{margin:0}.panel-title small{color:#7186a3}
+        .snapshot-line{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.snapshot-chip{padding:9px 10px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.02)}.snapshot-chip span{display:block;color:#7186a3;font-size:10px;text-transform:uppercase;letter-spacing:.07em}.snapshot-chip strong{display:block;margin-top:3px;color:#e7f3ff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .studio-form{display:grid;gap:10px}.studio-form input,.studio-form select{width:100%;padding:11px 13px;border-radius:8px;border:1px solid rgba(0,225,255,.15);background:#080e20;color:white}.control-row{display:grid;grid-template-columns:160px 1fr;gap:10px}.control-row.single{grid-template-columns:1fr}
+        .lookup-wrap{position:relative}.lookup-results{display:none;position:absolute;z-index:80;top:calc(100% + 6px);left:0;right:0;max-height:300px;overflow:auto;border:1px solid rgba(0,225,255,.28);border-radius:10px;background:#071020;box-shadow:0 18px 40px rgba(0,0,0,.5)}.lookup-results.open{display:block}.lookup-result{display:block;width:100%;padding:10px 11px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#dbeafe;text-align:left;cursor:pointer}.lookup-result:hover{background:rgba(0,225,255,.09)}.lookup-result strong,.lookup-result small{display:block}.lookup-result small{margin-top:3px;color:#8296b2;line-height:1.3}.lookup-empty{padding:12px;color:#8296b2}
+        .selection-card{display:none;padding:10px 12px;border:1px solid rgba(124,92,255,.23);border-radius:9px;background:rgba(124,92,255,.055);color:#b7c9df;font-size:12px;line-height:1.4}.selection-card.open{display:block}.selection-card strong{display:block;color:#fff;font-size:13px;margin-bottom:3px}
+        .button-row{display:flex;gap:8px;flex-wrap:wrap}.button-row button{flex:1;min-width:140px;padding:10px 12px}.hint{font-size:11px;color:#7186a3;line-height:1.4}
+        .planned-list{display:grid;gap:6px;max-height:210px;overflow:auto}.planned-row{display:grid;grid-template-columns:82px 1fr auto;gap:8px;align-items:center;padding:8px 9px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.02);font-size:12px}.planned-row .planned-slot{color:#7f96b4}.planned-row .planned-id{color:#7186a3}.empty{padding:12px;color:#7186a3;text-align:center}
+        details.compact{border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.02)}details.compact summary{cursor:pointer;list-style:none;padding:12px 14px;color:#dfeeff;font-weight:600}details.compact summary::-webkit-details-marker{display:none}details.compact summary:after{content:"+";float:right;color:#7186a3}details.compact[open] summary:after{content:"−"}.gear-list{display:grid;gap:6px;padding:0 12px 12px}.gear-row{display:grid;grid-template-columns:84px 1fr auto;gap:10px;align-items:center;padding:8px 9px;border:1px solid rgba(255,255,255,.06);border-radius:7px;background:#080e20}.gear-slot{color:#7f96b4;font-size:11px}.gear-name{color:#dfeeff;font-size:12px}.gear-id{color:#7186a3;font-size:10px;text-align:right}
+        .section-kicker{color:#8eefff;font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}.divider{height:1px;background:rgba(255,255,255,.06);margin:2px 0}
+        code{color:#9be7ff}
+        @media(max-width:1180px){.studio-shell{grid-template-columns:1fr}.stage{position:relative;top:auto}.viewer-shell,#wow-model-viewer{height:520px;min-height:520px}.snapshot-line{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:720px){.viewer-shell,#wow-model-viewer{height:440px;min-height:440px}.control-row{grid-template-columns:1fr}.snapshot-line{grid-template-columns:1fr 1fr}.stage-meta{align-items:flex-start;flex-direction:column}.stage-badge{white-space:normal}}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand"><div class="logo">JT</div><div class="brand-text"><strong>JesterWoW</strong><small>Admin Console</small></div></div>
+        <nav><a href="/">Dashboard</a><a href="/accounts">Accounts</a><a class="active" href="/characters">Characters</a><a href="/server">Server</a><a href="/gear">Gear</a><a href="/jmod-tools">JMod Tools</a><a href="/tools/god-mode">God Mode</a><a href="/audit">Audit Log</a></nav>
+    </aside>
+    <main>
+        <header>
+            <div><a class="back-link" href="/characters">← Characters</a><h1>{{ character.name }} Studio</h1><p>{{ character.race_name }} {{ character.class_name }} · Level {{ character.level }} · {{ character.gender_name }}</p></div>
+            <div class="status"><span class="dot {% if character.online %}online{% else %}offline{% endif %}"></span>{% if character.online %}Online{% else %}Offline{% endif %}</div>
+        </header>
+
+        <div class="toolbar"><a class="secondary-button" href="/characters/{{ character.guid }}">Admin</a><a class="secondary-button" href="/jmod-tools">JMod Tools</a><a class="secondary-button" href="/characters/{{ character.guid }}/render-data">JSON</a></div>
+
+        <div class="studio-shell">
+            <section class="panel stage">
+                <div class="viewer-shell"><div id="wow-model-viewer" data-guid="{{ character.guid }}" data-character="{{ character.name }}" aria-label="Interactive World of Warcraft character model"></div></div>
+                <div id="character-render-status" class="render-status">Starting the real 3D renderer...</div>
+                <div class="stage-meta">
+                    <div><h2>{{ character.name }}</h2><p>{{ character.race_name }} {{ character.class_name }}</p></div>
+                    <span class="stage-badge">Drag to rotate · wheel to zoom</span>
+                </div>
+            </section>
+
+            <div class="workspace">
+                <section class="panel panel-pad">
+                    <div class="snapshot-line">
+                        <div class="snapshot-chip"><span>Level</span><strong>{{ character.level }}</strong></div>
+                        <div class="snapshot-chip"><span>Gold</span><strong>{{ character.money // 10000 }}g {{ (character.money // 100) % 100 }}s</strong></div>
+                        <div class="snapshot-chip"><span>Account</span><strong>{{ character.account }}</strong></div>
+                        <div class="snapshot-chip"><span>Location</span><strong>Map {{ character.location.map }} / Zone {{ character.location.zone }}</strong></div>
+                    </div>
+                </section>
+
+                <section class="panel panel-pad">
+                    <div class="section-kicker">Build</div>
+                    <div class="panel-title"><div><h2>Gear</h2><small>Preview first, mail when the loadout looks right.</small></div></div>
+                    <div class="studio-form" style="margin-top:12px">
+                        <div class="control-row">
+                            <select id="gear-slot"><option value="0">Head</option><option value="2">Shoulders</option><option value="4">Chest</option><option value="5">Waist</option><option value="6">Legs</option><option value="7">Feet</option><option value="8">Wrists</option><option value="9">Hands</option><option value="14">Back</option><option value="15">Main Hand</option><option value="16">Off Hand</option><option value="17">Ranged / Relic</option><option value="18">Tabard</option></select>
+                            <div class="lookup-wrap"><input id="gear-search" placeholder="Search gear by name or ID" autocomplete="off"><div id="gear-results" class="lookup-results"></div></div>
+                        </div>
+                        <div id="gear-selection" class="selection-card"></div>
+                        <div class="button-row"><button id="preview-gear" class="primary-button" type="button">Preview</button><button id="mail-gear" class="secondary-button" type="button">Mail Item</button></div>
+                        <div class="divider"></div>
+                        <div class="panel-title"><h3>Preview Loadout</h3><small>Only changed slots appear here.</small></div>
+                        <div id="planned-gear" class="planned-list"><div class="empty">No preview overrides yet.</div></div>
+                        <div class="button-row"><button id="mail-loadout" class="primary-button" type="button">Mail Loadout</button><button id="reset-loadout" class="secondary-button" type="button">Reset</button></div>
+                    </div>
+                </section>
+
+                <section class="panel panel-pad">
+                    <div class="section-kicker">Training</div>
+                    <div class="panel-title"><div><h2>Spells</h2><small>Search the local 3.3.5a spell catalog and teach the exact rank.</small></div></div>
+                    <div class="studio-form" style="margin-top:12px">
+                        <div class="lookup-wrap"><input id="spell-search" placeholder="Search spell name or ID" autocomplete="off"><div id="spell-results" class="lookup-results"></div></div>
+                        <div id="spell-selection" class="selection-card"></div>
+                        <button id="train-spell" class="primary-button" type="button">Teach Spell</button>
+                        <div class="hint">Uses the existing audited <code>player learn {{ character.name }} &lt;spell id&gt;</code> path. Duplicate names remain explicit by ID.</div>
+                    </div>
+                </section>
+
+                <details class="compact">
+                    <summary>Currently Equipped · {{ character.equipment|length }} items</summary>
+                    {% if character.equipment %}<div class="gear-list">{% for item in character.equipment %}<div class="gear-row"><div class="gear-slot">{{ item.slot_name }}</div><div class="gear-name">{{ item.name }}<br><small>iLvl {{ item.item_level }} · Quality {{ item.quality }}</small></div><div class="gear-id">{{ item.item_id }}<br>D{{ item.display_id }}</div></div>{% endfor %}</div>{% else %}<div class="empty">No equipped items found.</div>{% endif %}
+                </details>
+
+                <details class="compact">
+                    <summary>Appearance / Character Details</summary>
+                    <div class="snapshot-line" style="padding:0 12px 12px">
+                        <div class="snapshot-chip"><span>GUID</span><strong>{{ character.guid }}</strong></div><div class="snapshot-chip"><span>Played</span><strong>{{ character.played_seconds // 3600 }}h</strong></div><div class="snapshot-chip"><span>Race</span><strong>{{ character.race_name }} [{{ character.race }}]</strong></div><div class="snapshot-chip"><span>Class</span><strong>{{ character.class_name }} [{{ character.class }}]</strong></div><div class="snapshot-chip"><span>Skin</span><strong>{{ character.appearance.skin }}</strong></div><div class="snapshot-chip"><span>Face</span><strong>{{ character.appearance.face }}</strong></div><div class="snapshot-chip"><span>Hair</span><strong>{{ character.appearance.hair_style }} / {{ character.appearance.hair_color }}</strong></div><div class="snapshot-chip"><span>Facial</span><strong>{{ character.appearance.facial_style }}</strong></div>
+                    </div>
+                </details>
+            </div>
+        </div>
+        <div id="studio-action-status" class="studio-status" style="display:none"></div>
+    </main>
+</div>
+<script src="/static/character_studio.js"></script>
+</body>
+</html>
