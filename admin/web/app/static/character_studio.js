@@ -59,10 +59,18 @@
         document.head.appendChild(script);
     });
 
-    const viewerSlot = (equipmentSlot) => ({
+    const baseViewerSlot = (equipmentSlot) => ({
         0: 1, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
         14: 15, 15: 21, 16: 22, 17: 18, 18: 19,
     })[equipmentSlot];
+
+    const viewerSlotForItem = (item) => {
+        const equipmentSlot = Number(item.slot);
+        const inventoryType = Number(item.inventory_type || 0);
+        // wow-model-viewer has a dedicated slot for robe-style chest pieces.
+        if (equipmentSlot === 4 && inventoryType === 20) return 20;
+        return baseViewerSlot(equipmentSlot);
+    };
 
     const mergedEquipment = () => {
         const bySlot = new Map((renderData?.equipment || []).map((item) => [Number(item.slot), item]));
@@ -73,7 +81,7 @@
     const buildViewerCharacter = (data, equipment) => {
         const items = equipment
             .map((item) => {
-                const slot = viewerSlot(Number(item.slot));
+                const slot = viewerSlotForItem(item);
                 if (!slot || !item.display_id) return null;
                 return [slot, Number(item.display_id)];
             })
@@ -111,6 +119,23 @@
             setRenderStatus(`3D renderer unavailable: ${error.message}`, 'error');
             stage.classList.add('render-failed');
         }
+    }
+
+    async function updatePreviewItem(item) {
+        if (!activeModel) throw new Error('The 3D character is not ready yet.');
+        const viewerSlot = viewerSlotForItem(item);
+        const displayId = Number(item.display_id || 0);
+        if (!viewerSlot || !displayId) throw new Error('That item does not have a renderable slot/display ID.');
+
+        // The viewer exposes a live equipment update API. Use it instead of rebuilding
+        // the whole model, which can leave old geosets/materials cached in the viewer.
+        if (typeof activeModel.updateItemViewer === 'function') {
+            await Promise.resolve(activeModel.updateItemViewer(viewerSlot, displayId, 0));
+            return;
+        }
+
+        // Older viewer builds do not expose updateItemViewer, so retain the safe fallback.
+        await renderCharacter();
     }
 
     async function startRenderer() {
@@ -245,10 +270,19 @@
 
         preview?.addEventListener('click', async () => {
             if (!selectedGear || !selectedGear.display_id) return setActionStatus('Choose a compatible gear result with a display ID first.', 'error');
-            previewOverrides.set(Number(slot.value), {...selectedGear, slot: Number(slot.value)});
+            const previewItem = {...selectedGear, slot: Number(slot.value)};
+            previewOverrides.set(Number(slot.value), previewItem);
             updatePlanned();
-            await renderCharacter();
-            setActionStatus(`Previewing ${selectedGear.name} in ${slotNames[Number(slot.value)]}.`, 'ok');
+            try {
+                setRenderStatus(`Applying ${selectedGear.name}...`);
+                await updatePreviewItem(previewItem);
+                const overrideCount = previewOverrides.size;
+                setRenderStatus(`Live preview loaded with ${overrideCount} gear override${overrideCount === 1 ? '' : 's'}.`, 'ok');
+                setActionStatus(`Previewing ${selectedGear.name} in ${slotNames[Number(slot.value)]}.`, 'ok');
+            } catch (error) {
+                setRenderStatus(`Preview failed: ${error.message}`, 'error');
+                setActionStatus(error.message, 'error');
+            }
         });
 
         mail?.addEventListener('click', async () => {
@@ -291,13 +325,11 @@
         });
     }
 
-    document.addEventListener('mousedown', (event) => {
-        for (const box of document.querySelectorAll('.lookup-results')) {
-            if (!box.parentElement?.contains(event.target)) box.classList.remove('open');
-        }
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.lookup-wrap')) document.querySelectorAll('.lookup-results.open').forEach((el) => el.classList.remove('open'));
     });
 
+    startRenderer();
     initGearLab();
     initSpellTraining();
-    startRenderer();
 })();
