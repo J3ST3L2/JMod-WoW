@@ -7,10 +7,10 @@
 
     <title>Characters - JesterWoW Admin</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/style.css"
-    >
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .character-actions{display:flex;gap:8px;flex-wrap:wrap}.character-actions a{font-size:12px;text-decoration:none}
+    </style>
 </head>
 
 <body>
@@ -21,9 +21,7 @@
 
         <div class="brand">
 
-            <div class="logo">
-                JT
-            </div>
+            <div class="logo">JT</div>
 
             <div class="brand-text">
                 <strong>JesterWoW</strong>
@@ -49,12 +47,10 @@
     <main>
 
         <header>
-
             <div>
                 <h1>Characters</h1>
-                <p>Character statistics and administration</p>
+                <p>Character statistics, rendering, and administration</p>
             </div>
-
         </header>
 
 
@@ -70,6 +66,7 @@
                         <th>Gold</th>
                         <th>Played</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
 
@@ -78,50 +75,24 @@
                 {% for char in characters %}
 
                 <tr>
-
+                    <td><a class="table-link" href="/characters/{{ char.guid }}/studio">{{ char.name }}</a></td>
+                    <td>{{ char.username or "Unknown" }}</td>
+                    <td>{{ char.level }}</td>
+                    <td>{{ char.money // 10000 }}g {{ (char.money // 100) % 100 }}s {{ char.money % 100 }}c</td>
+                    <td>{{ char.totaltime // 3600 }}h</td>
                     <td>
-                        <a class="table-link"
-                           href="/characters/{{ char.guid }}">
-                            {{ char.name }}
-                        </a>
-                    </td>
-
-                    <td>
-                        {{ char.username or "Unknown" }}
-                    </td>
-
-                    <td>
-                        {{ char.level }}
-                    </td>
-
-                    <td>
-                        {{ char.money // 10000 }}g
-                        {{ (char.money // 100) % 100 }}s
-                        {{ char.money % 100 }}c
-                    </td>
-
-                    <td>
-                        {{ char.totaltime // 3600 }}h
-                    </td>
-
-                    <td>
-
                         {% if char.online %}
-
-                            <span class="badge online-badge">
-                                Online
-                            </span>
-
+                            <span class="badge online-badge">Online</span>
                         {% else %}
-
-                            <span class="badge offline-badge">
-                                Offline
-                            </span>
-
+                            <span class="badge offline-badge">Offline</span>
                         {% endif %}
-
                     </td>
-
+                    <td>
+                        <div class="character-actions">
+                            <a class="secondary-button" href="/characters/{{ char.guid }}/studio">Studio</a>
+                            <a class="secondary-button" href="/characters/{{ char.guid }}">Admin</a>
+                        </div>
+                    </td>
                 </tr>
 
                 {% endfor %}
