@@ -1,11 +1,14 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gear - JesterWoW Admin</title>
-<style>
-body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:0}.wrap{max-width:1200px;margin:40px auto;padding:0 20px}a{color:#58a6ff}nav{display:flex;gap:18px;margin-bottom:28px}.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;margin-bottom:18px}input,select,button{font:inherit;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:7px;padding:9px}button{background:#238636;border:0;cursor:pointer}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}table{width:100%;border-collapse:collapse}th,td{text-align:left;border-bottom:1px solid #30363d;padding:10px}.ok{border-left:4px solid #3fb950}.muted{color:#8b949e}
-</style></head><body><div class="wrap">
-<nav><a href="/">Dashboard</a><a href="/characters">Characters</a><a href="/gear">Gear</a><a href="/tools/god-mode">God Mode</a><a href="/audit">Audit Log</a></nav>
-<h1>Character Gear</h1><p class="muted">Items are delivered through AzerothCore mail, which works for named offline characters and avoids selected-target console behavior.</p>
-{% if message %}<div class="card ok">{{ message }}</div>{% endif %}
-<div class="card"><form method="get" class="row"><select name="character"><option value="">Choose character</option>{% for c in characters %}<option value="{{ c.name }}" {% if c.name == selected_character %}selected{% endif %}>{{ c.name }} (Lv {{ c.level }})</option>{% endfor %}</select><input name="q" value="{{ q }}" placeholder="Search item name or ID" size="42"><button type="submit">Search</button></form></div>
-{% if items %}<div class="card"><table><thead><tr><th>Item</th><th>ID</th><th>iLvl</th><th>Req</th><th>Send</th></tr></thead><tbody>{% for i in items %}<tr><td>{{ i.name }}</td><td>{{ i.entry }}</td><td>{{ i.ItemLevel }}</td><td>{{ i.RequiredLevel }}</td><td><form method="post" action="/gear/send" class="row"><input type="hidden" name="character" value="{{ selected_character }}"><input type="hidden" name="item_id" value="{{ i.entry }}"><input name="count" type="number" min="1" max="1000" value="1" style="width:70px"><button type="submit" {% if not selected_character %}disabled title="Choose a character first"{% endif %}>Mail item</button></form></td></tr>{% endfor %}</tbody></table></div>{% elif q %}<div class="card">No items matched.</div>{% endif %}
-</div></body></html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="refresh" content="0;url=/jmod-tools#catalog">
+    <title>Gear moved - JesterWoW Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell"><main><section class="panel" style="max-width:720px;margin:60px auto;padding:24px"><h1>Gear moved</h1><p>Item delivery and catalog search now live in JMod Tools, while visual loadout work lives in Character Studio.</p><p><a class="primary-button" href="/jmod-tools#catalog">Open JMod Tools</a> <a class="secondary-button" href="/characters">Open Characters</a></p></section></main></div>
+<script>window.location.replace('/jmod-tools#catalog');</script>
+</body>
+</html>
