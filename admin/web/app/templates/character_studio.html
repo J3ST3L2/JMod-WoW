@@ -6,26 +6,23 @@
     <title>{{ character.name }} Character Studio - JesterWoW Admin</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        .studio-grid{display:grid;grid-template-columns:minmax(360px,1.15fr) minmax(320px,.85fr);gap:20px}
-        .stage{min-height:610px;position:relative;overflow:hidden;padding:22px;background:radial-gradient(circle at 50% 32%,rgba(0,225,255,.10),transparent 34%),linear-gradient(180deg,rgba(9,18,38,.98),rgba(3,8,19,.98));border-radius:14px}
-        .stage:before{content:"";position:absolute;inset:auto 12% 7% 12%;height:34px;border-radius:50%;background:rgba(0,0,0,.55);filter:blur(10px)}
-        .avatar-wrap{height:430px;display:grid;place-items:center;position:relative}
-        .avatar{position:relative;width:190px;height:390px;filter:drop-shadow(0 20px 24px rgba(0,0,0,.55))}
-        .avatar-head{position:absolute;top:22px;left:62px;width:66px;height:78px;border-radius:46% 46% 42% 42%;background:linear-gradient(180deg,#7d91ad,#53677e);border:2px solid rgba(255,255,255,.12)}
-        .avatar-hair{position:absolute;top:9px;left:55px;width:80px;height:46px;border-radius:50% 50% 34% 34%;background:#202a3a;transform:rotate(-2deg)}
-        .avatar-body{position:absolute;top:96px;left:40px;width:110px;height:150px;border-radius:34px 34px 25px 25px;background:linear-gradient(180deg,#354a68,#18243a);border:2px solid rgba(0,225,255,.18)}
-        .avatar-arm{position:absolute;top:108px;width:38px;height:155px;border-radius:20px;background:linear-gradient(180deg,#354a68,#18243a)}
-        .avatar-arm.left{left:8px;transform:rotate(6deg)}.avatar-arm.right{right:8px;transform:rotate(-6deg)}
-        .avatar-leg{position:absolute;top:235px;width:44px;height:145px;border-radius:20px;background:linear-gradient(180deg,#263853,#111a2d)}
-        .avatar-leg.left{left:46px}.avatar-leg.right{right:46px}
-        .stage-label{text-align:center;position:relative}.stage-label h2{margin:0;color:#fff;font-size:24px}.stage-label p{margin:6px 0;color:#8296b2}.stage-badge{display:inline-block;margin-top:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(0,225,255,.22);color:#8eefff;background:rgba(0,225,255,.06);font-size:12px}
+        .studio-grid{display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(320px,.85fr);gap:20px}
+        .stage{min-height:650px;position:relative;overflow:hidden;padding:22px;background:radial-gradient(circle at 50% 30%,rgba(0,225,255,.11),transparent 36%),linear-gradient(180deg,rgba(9,18,38,.98),rgba(3,8,19,.98));border-radius:14px}
+        .viewer-shell{height:500px;position:relative;border:1px solid rgba(0,225,255,.13);border-radius:12px;background:radial-gradient(circle at 50% 40%,rgba(124,92,255,.08),transparent 48%),rgba(0,0,0,.12);overflow:hidden}
+        #wow-model-viewer{width:100%;height:100%;min-height:500px}
+        #wow-model-viewer canvas{width:100%!important;height:100%!important;display:block}
+        #wow-model-viewer.render-failed:after{content:"Renderer offline";position:absolute;inset:0;display:grid;place-items:center;color:#7186a3;font-size:18px}
+        .render-status{margin-top:12px;padding:10px 12px;border-radius:8px;border:1px solid rgba(0,225,255,.14);background:rgba(0,225,255,.035);color:#9cb2cf;font-size:12px;line-height:1.4}
+        .render-status[data-kind="ok"]{color:#4dffc3;border-color:rgba(77,255,195,.22);background:rgba(77,255,195,.05)}
+        .render-status[data-kind="error"]{color:#ff9dbb;border-color:rgba(255,157,187,.22);background:rgba(255,157,187,.05)}
+        .stage-label{text-align:center;margin-top:16px;position:relative}.stage-label h2{margin:0;color:#fff;font-size:24px}.stage-label p{margin:6px 0;color:#8296b2}.stage-badge{display:inline-block;margin-top:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(0,225,255,.22);color:#8eefff;background:rgba(0,225,255,.06);font-size:12px}
         .panel-pad{padding:20px}.stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:9px;background:rgba(255,255,255,.02)}.stat span{display:block;color:#7186a3;font-size:11px;text-transform:uppercase;letter-spacing:.08em}.stat strong{display:block;margin-top:5px;color:#e7f3ff}
         .appearance{margin-top:16px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.appearance div{padding:10px 8px;border-radius:8px;background:#080e20;border:1px solid rgba(255,255,255,.06);text-align:center}.appearance small{display:block;color:#7186a3}.appearance strong{display:block;margin-top:4px}
         .gear-list{display:grid;gap:8px;margin-top:12px}.gear-row{display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.02)}.gear-slot{color:#7f96b4;font-size:12px}.gear-name{color:#dfeeff}.gear-id{color:#7186a3;font-size:11px;text-align:right}.empty{padding:18px;color:#7186a3;text-align:center}
         .renderer-note{margin-top:16px;padding:12px 14px;border:1px solid rgba(124,92,255,.24);border-radius:9px;background:rgba(124,92,255,.055);color:#aebeda;font-size:12px;line-height:1.5}
         .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px}.toolbar a{display:inline-flex;align-items:center;text-decoration:none}
         code{color:#9be7ff}
-        @media(max-width:980px){.studio-grid{grid-template-columns:1fr}.stage{min-height:540px}.appearance{grid-template-columns:repeat(3,1fr)}}
+        @media(max-width:980px){.studio-grid{grid-template-columns:1fr}.stage{min-height:590px}.appearance{grid-template-columns:repeat(3,1fr)}}
     </style>
 </head>
 <body>
@@ -61,20 +58,17 @@
 
         <div class="studio-grid">
             <section class="panel stage">
-                <div class="avatar-wrap" id="character-render-stage" aria-label="Character render stage">
-                    <div class="avatar" aria-hidden="true">
-                        <div class="avatar-hair"></div><div class="avatar-head"></div><div class="avatar-body"></div>
-                        <div class="avatar-arm left"></div><div class="avatar-arm right"></div>
-                        <div class="avatar-leg left"></div><div class="avatar-leg right"></div>
-                    </div>
+                <div class="viewer-shell">
+                    <div id="wow-model-viewer" data-guid="{{ character.guid }}" aria-label="Interactive World of Warcraft character model"></div>
                 </div>
+                <div id="character-render-status" class="render-status">Starting the real 3D renderer...</div>
                 <div class="stage-label">
                     <h2>{{ character.name }}</h2>
                     <p>{{ character.race_name }} {{ character.class_name }}</p>
-                    <span class="stage-badge">Local 3.3.5a render data ready</span>
+                    <span class="stage-badge">Interactive 3D · drag to rotate · wheel to zoom</span>
                 </div>
                 <div class="renderer-note">
-                    <strong>Renderer foundation:</strong> JMod now has the exact race, gender, appearance values and equipped item display IDs needed by a local WotLK renderer. This mannequin is deliberately temporary. The next stage replaces it with client-extracted 3D model and texture assets instead of depending on Blizzard or Wowhead at runtime.
+                    <strong>Real renderer:</strong> appearance and equipped display IDs come from your AzerothCore database. JMod loads the browser model viewer through a local caching proxy on port <code>2999</code>. The proxy caches the model assets after first use instead of making the admin app itself a giant pile of MPQ archaeology.
                 </div>
             </section>
 
@@ -120,5 +114,6 @@
         </div>
     </main>
 </div>
+<script src="/static/character_studio.js"></script>
 </body>
 </html>
