@@ -97,6 +97,8 @@ end
 
 local function ShowHelp()
     Print("Commands:")
+    Print("  |cffffffff/guide|r opens the beginner quest guide")
+    Print("  |cffffffff/family|r opens player travel (needs server module)")
     Print("  |cffffffffitem <id> [count]|r   Example: item 41600 4")
     Print("  |cffffffffadd <id> [count]|r    Same as item")
     Print("  |cffffffffbags|r                 Adds 4 Glacial Bags")
@@ -234,6 +236,25 @@ MakeButton("Help", 448, 72, ShowHelp)
 MakeButton("Clear", 526, 72, function()
     input:SetText("")
     input:SetFocus()
+end)
+
+-- Player-facing actions are separate from the GM-only command input.
+local questButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+questButton:SetWidth(146)
+questButton:SetHeight(25)
+questButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -105)
+questButton:SetText("Quest Guide")
+questButton:SetScript("OnClick", function()
+    if JesterFamily_QuestGuide then JesterFamily_QuestGuide() end
+end)
+
+local travelButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+travelButton:SetWidth(146)
+travelButton:SetHeight(25)
+travelButton:SetPoint("LEFT", questButton, "RIGHT", 8, 0)
+travelButton:SetText("Player Travel")
+travelButton:SetScript("OnClick", function()
+    if JesterFamily_Show then JesterFamily_Show() end
 end)
 
 local function ExecuteInput()
