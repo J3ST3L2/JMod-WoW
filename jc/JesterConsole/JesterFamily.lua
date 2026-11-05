@@ -146,6 +146,25 @@ Button(family, "Orgrimmar", 340, -322, 96, function() SendFamily("hub", "orgrimm
 Button(family, "Refresh Group", 22, -365, 190, RefreshRoster)
 Button(family, "Decline Summon", 226, -365, 210, function() SendFamily("decline") end)
 
+-- Standard party invitation, not a forced group join. The invited player accepts normally.
+Button(family, "Invite to Party", 22, -394, 190, function()
+    local name = Trim(target:GetText())
+    if not name:match("^[%a]+$") then
+        Message("|cffff5555Enter a valid character name.|r")
+        return
+    end
+    if name == UnitName("player") then
+        Message("You cannot invite yourself.")
+        return
+    end
+    if InviteUnit then
+        InviteUnit(name)
+        Message("Party invite sent to " .. name .. ". They must accept.")
+    else
+        Message("Your client does not support party invitations here.")
+    end
+end)
+
 family:SetScript("OnShow", RefreshRoster)
 
 function JesterFamily_Show()
